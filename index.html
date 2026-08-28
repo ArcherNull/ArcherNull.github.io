@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NextBot AI — Bridging Human Cognition & AI-Driven Solutions</title>
+
+<style>
+/* ================= RESET & BASE ================= */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+:root{
+  --bg:#040814;
+  --bg-2:#070E1F;
+  --bg-3:#0A1530;
+  --surface:#0C1633;
+  --surface-2:#0F1C3D;
+  --border:#1E3A5F;
+  --border-2:#244D7A;
+  --text:#E6EDF7;
+  --text-2:#A7B6CC;
+  --text-3:#6B7A92;
+  --cyan:#00F0FF;
+  --cyan-2:#22D3EE;
+  --blue:#3B82F6;
+  --purple:#A855F7;
+  --purple-2:#C084FC;
+  --pink:#EC4899;
+  --green:#10B981;
+  --radius:12px;
+  --radius-lg:20px;
+  --shadow-glow:0 0 40px rgba(0,240,255,.15);
+  --shadow-card:0 4px 24px rgba(0,0,0,.4);
+  --container:1200px;
+}
+body{
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.6;
+  overflow-x:hidden;
+  font-size:16px;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.container{max-width:var(--container);margin:0 auto;padding:0 24px}
+.section{padding:100px 0;position:relative}
+.grid-bg{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,240,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,.035) 1px, transparent 1px);
+  background-size:64px 64px;
+  pointer-events:none;
+  z-index:0;
+  mask-image:radial-gradient(ellipse at 50% 0%, #000 30%, transparent 80%);
+}
+.h-tag{
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-weight:700;
+  line-height:1.15;
+  letter-spacing:-.02em;
+}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:ui-monospace,"SFMono-Regular","Menlo","Monaco","Consolas",monospace;
+  font-size:12px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.12em;
+  color:var(--cyan);
+  padding:6px 14px;
+  border:1px solid rgba(0,240,255,.25);
+  border-radius:999px;
+  background:rgba(0,240,255,.05);
+  margin-bottom:20px;
+}
+.eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+
+/* ================= NAVBAR ================= */
+.navbar{
+  position:sticky;top:0;z-index:100;
+  height:80px;
+  background:rgba(4,8,20,.8);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(30,58,95,.5);
+}
+.nav-inner{
+  max-width:var(--container);margin:0 auto;padding:0 24px;
+  height:100%;display:flex;align-items:center;justify-content:space-between;gap:40px;
+}
+.logo{
+  display:flex;align-items:center;gap:10px;
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-weight:700;font-size:20px;letter-spacing:-.02em;
+}
+.logo-mark{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:grid;place-items:center;
+  box-shadow:0 0 20px rgba(0,240,255,.35);
+  position:relative;overflow:hidden;
+}
+.logo-mark::after{
+  content:"";position:absolute;inset:2px;border-radius:7px;
+  background:var(--bg);display:grid;place-items:center;
+}
+.logo-mark::before{
+  content:"N";position:relative;z-index:2;
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-weight:800;font-size:16px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.nav-links{display:flex;align-items:center;gap:36px}
+.nav-links a{
+  font-size:14px;font-weight:500;color:var(--text-2);
+  transition:color .2s;position:relative;
+}
+.nav-links a:hover{color:var(--text)}
+.nav-links a.active{color:var(--text)}
+.nav-links a.active::after{
+  content:"";position:absolute;left:0;right:0;bottom:-8px;
+  height:2px;border-radius:2px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+}
+.nav-cta{display:flex;align-items:center;gap:12px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 22px;border-radius:10px;
+  font-size:14px;font-weight:600;
+  transition:all .2s;white-space:nowrap;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--cyan),#0AA8C2);
+  color:#012029;
+  box-shadow:0 4px 20px rgba(0,240,255,.3), inset 0 1px 0 rgba(255,255,255,.2);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(0,240,255,.45)}
+.btn-ghost{
+  border:1px solid var(--border);color:var(--text);background:transparent;
+}
+.btn-ghost:hover{border-color:var(--border-2);background:var(--surface)}
+.btn-lg{padding:16px 28px;font-size:15px;border-radius:12px}
+
+/* ================= HERO ================= */
+.hero{
+  padding:80px 0 120px;position:relative;overflow:hidden;
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(168,85,247,.18), transparent 60%),
+    radial-gradient(900px 500px at 80% 10%, rgba(0,240,255,.12), transparent 60%),
+    var(--bg);
+}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,240,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,.04) 1px, transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse at 50% 20%, #000 40%, transparent 85%);
+  pointer-events:none;
+}
+.hero-inner{
+  position:relative;z-index:2;
+  display:grid;grid-template-columns:1.05fr 1fr;gap:80px;align-items:center;
+}
+.hero-copy h1{
+  font-size:64px;margin-bottom:24px;
+}
+.hero-copy h1 .grad{
+  background:linear-gradient(135deg,#fff 0%, var(--cyan) 60%, var(--purple) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-sub{
+  font-size:18px;color:var(--text-2);max-width:540px;margin-bottom:36px;line-height:1.7;
+}
+.hero-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:44px}
+.hero-social-proof{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.avatars{display:flex}
+.avatars span{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  border:2px solid var(--bg);margin-left:-10px;
+  display:grid;place-items:center;
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-weight:700;font-size:12px;color:#fff;
+}
+.avatars span:first-child{margin-left:0}
+.hero-proof-text{font-size:13px;color:var(--text-3)}
+.hero-proof-text b{color:var(--text);font-weight:600}
+.stars{display:flex;gap:2px;color:#F59E0B;font-size:14px;margin-bottom:4px}
+
+/* Hero visual */
+.hero-visual{position:relative}
+.hero-visual::before{
+  content:"";position:absolute;inset:-30px;z-index:-1;
+  background:radial-gradient(closest-side,rgba(0,240,255,.15),transparent 70%);
+  filter:blur(20px);
+}
+.hero-mockup{
+  position:relative;border-radius:var(--radius-lg);
+  border:1px solid var(--border);
+  background:linear-gradient(180deg, var(--surface-2), var(--surface));
+  overflow:hidden;
+  box-shadow:var(--shadow-card), 0 0 80px rgba(0,240,255,.08);
+}
+.mockup-header{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.02);
+}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot.r{background:#EF4444}.dot.y{background:#F59E0B}.dot.g{background:#10B981}
+.mockup-title{
+  margin-left:12px;font-family:ui-monospace,"SFMono-Regular","Menlo","Monaco","Consolas","Courier New",monospace;
+  font-size:11px;color:var(--text-3);
+}
+.mockup-body{padding:36px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.mockup-screen{
+  position:relative;aspect-ratio:16/10;border-radius:var(--radius);
+  background:
+    radial-gradient(circle at 30% 30%, rgba(0,240,255,.25), transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(168,85,247,.2), transparent 50%),
+    linear-gradient(135deg,#07132B,#0A1D45);
+  border:1px solid var(--border-2);
+  overflow:hidden;
+}
+.mockup-screen img{width:100%;height:100%;object-fit:cover;opacity:.85;mix-blend-mode:screen}
+.scan-line{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg, transparent 0%, rgba(0,240,255,.08) 50%, transparent 100%);
+  animation:scan 4s linear infinite;
+}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+.mockup-stats{display:flex;flex-direction:column;gap:14px;justify-content:center}
+.stat-chip{
+  padding:16px;border-radius:var(--radius);
+  border:1px solid var(--border);background:rgba(0,240,255,.03);
+}
+.stat-chip .label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);margin-bottom:6px}
+.stat-chip .value{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-size:28px;font-weight:700;line-height:1}
+.stat-chip .value.cyan{color:var(--cyan)}
+.stat-chip .value.purple{color:var(--purple-2)}
+
+/* Logos strip */
+.logos{
+  padding:60px 0 20px;position:relative;z-index:2;
+}
+.logos-label{
+  text-align:center;font-size:12px;text-transform:uppercase;
+  letter-spacing:.18em;color:var(--text-3);margin-bottom:28px;font-weight:500;
+}
+.logos-row{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:40px;align-items:center;
+  max-width:1000px;margin:0 auto;
+}
+.logo-item{
+  height:28px;opacity:.4;
+  background:linear-gradient(90deg,var(--text-3),var(--text-2));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  display:flex;align-items:center;justify-content:center;
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-weight:700;letter-spacing:-.02em;font-size:18px;
+}
+
+/* ================= SECTION HEADER ================= */
+.sec-head{text-align:center;max-width:720px;margin:0 auto 64px}
+.sec-head h2{font-size:48px;margin-bottom:16px}
+.sec-head p{font-size:17px;color:var(--text-2);line-height:1.7}
+.sec-head.left{text-align:left;margin:0 0 48px;max-width:620px}
+
+/* ================= CAPABILITIES (4 GRID) ================= */
+.capabilities{background:var(--bg-2);position:relative}
+.cap-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+.cap-card{
+  padding:40px;border-radius:var(--radius-lg);
+  border:1px solid var(--border);
+  background:linear-gradient(180deg, var(--surface) 0%, var(--bg-2) 100%);
+  transition:all .3s;position:relative;overflow:hidden;
+}
+.cap-card::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(0,240,255,.5), transparent);
+  opacity:0;transition:opacity .3s;
+}
+.cap-card:hover{
+  transform:translateY(-4px);
+  border-color:var(--border-2);
+  box-shadow:var(--shadow-card),0 0 60px rgba(0,240,255,.08);
+}
+.cap-card:hover::before{opacity:1}
+.cap-icon{
+  width:52px;height:52px;border-radius:12px;
+  display:grid;place-items:center;margin-bottom:24px;
+  background:linear-gradient(135deg,rgba(0,240,255,.12),rgba(168,85,247,.12));
+  border:1px solid rgba(0,240,255,.2);
+  color:var(--cyan);
+}
+.cap-card h3{font-size:24px;margin-bottom:12px;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-weight:700}
+.cap-card p{color:var(--text-2);font-size:15px;line-height:1.7;margin-bottom:20px}
+.cap-link{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:14px;font-weight:600;color:var(--cyan);
+}
+.cap-link:hover{gap:12px}
+.cap-link::after{content:"→";transition:gap .2s}
+
+/* ================= PRODUCT SHOWCASE ================= */
+.showcase{background:var(--bg)}
+.showcase-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.show-card{
+  border-radius:var(--radius-lg);overflow:hidden;
+  border:1px solid var(--border);
+  background:var(--surface);transition:all .3s;
+}
+.show-card:hover{transform:translateY(-6px);border-color:var(--cyan);box-shadow:var(--shadow-glow)}
+.show-thumb{
+  position:relative;aspect-ratio:4/3;overflow:hidden;
+  background:linear-gradient(135deg,#07132B,#0A1D45);
+}
+.show-thumb::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 20%, rgba(0,240,255,.35), transparent 60%),
+             radial-gradient(circle at 80% 80%, rgba(168,85,247,.25), transparent 60%);
+}
+.show-thumb.c2::after{background:radial-gradient(circle at 70% 30%,rgba(168,85,247,.35),transparent 60%),radial-gradient(circle at 20% 80%,rgba(0,240,255,.2),transparent 60%)}
+.show-thumb.c3::after{background:radial-gradient(circle at 50% 50%,rgba(59,130,246,.35),transparent 60%),radial-gradient(circle at 10% 10%,rgba(0,240,255,.2),transparent 60%)}
+.show-thumb.c4::after{background:radial-gradient(circle at 40% 70%,rgba(236,72,153,.3),transparent 60%),radial-gradient(circle at 90% 20%,rgba(168,85,247,.2),transparent 60%)}
+.show-body{padding:20px}
+.tag{
+  display:inline-block;font-size:10px;font-family:ui-monospace,"SFMono-Regular","Menlo","Monaco","Consolas","Courier New",monospace;
+  padding:3px 8px;border-radius:4px;
+  background:rgba(0,240,255,.1);color:var(--cyan-2);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;
+}
+.tag.purple{background:rgba(168,85,247,.1);color:var(--purple-2)}
+.tag.blue{background:rgba(59,130,246,.12);color:#93C5FD}
+.tag.pink{background:rgba(236,72,153,.1);color:#F9A8D4}
+.show-body h4{font-size:16px;font-weight:600;margin-bottom:6px;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+.show-body p{font-size:13px;color:var(--text-3);line-height:1.6}
+
+/* ================= TECH SPECS + STATS ================= */
+.tech{
+  background:var(--bg-2);position:relative;overflow:hidden;
+}
+.tech::before{
+  content:"";position:absolute;left:-10%;top:30%;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,85,247,.15),transparent 70%);
+  filter:blur(40px);pointer-events:none;
+}
+.tech-inner{
+  display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;position:relative;z-index:2;
+}
+.tech-left h2{font-size:42px;margin-bottom:20px}
+.tech-left > p{color:var(--text-2);font-size:16px;margin-bottom:36px;line-height:1.7}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px}
+.stat-big{
+  padding:24px;border-radius:var(--radius-lg);
+  border:1px solid var(--border);background:var(--surface);
+}
+.stat-big .n{
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-size:56px;font-weight:700;line-height:1;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:8px;
+}
+.stat-big .n small{font-size:28px;opacity:.75}
+.stat-big .d{font-size:13px;color:var(--text-2)}
+.feature-list{display:flex;flex-direction:column;gap:14px}
+.feature-list li{list-style:none;display:flex;align-items:flex-start;gap:12px;font-size:15px;color:var(--text-2)}
+.feature-list li::before{
+  content:"";flex-shrink:0;width:20px;height:20px;border-radius:6px;margin-top:2px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:grid;place-items:center;color:#012029;font-weight:900;font-size:11px;
+}
+.feature-list li:nth-child(1)::before{content:"✓"}
+.feature-list li:nth-child(2)::before{content:"✓"}
+.feature-list li:nth-child(3)::before{content:"✓"}
+.feature-list li:nth-child(4)::before{content:"✓"}
+.feature-list li b{color:var(--text);font-weight:600}
+
+/* Right: technical diagram */
+.tech-right{position:relative}
+.tech-panel{
+  border-radius:var(--radius-lg);overflow:hidden;
+  border:1px solid var(--border-2);background:var(--surface);
+  box-shadow:var(--shadow-card);
+}
+.tech-panel-head{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,240,255,.03);
+}
+.panel-title{font-family:ui-monospace,"SFMono-Regular","Menlo","Monaco","Consolas","Courier New",monospace;font-size:12px;color:var(--cyan)}
+.panel-tabs{display:flex;gap:2px;background:var(--bg-2);padding:3px;border-radius:8px}
+.panel-tabs button{
+  padding:4px 12px;border-radius:6px;font-size:11px;font-family:ui-monospace,"SFMono-Regular","Menlo","Monaco","Consolas","Courier New",monospace;
+  color:var(--text-3);
+}
+.panel-tabs button.active{background:var(--surface-2);color:var(--text)}
+.tech-body{padding:28px}
+.diagram{
+  position:relative;height:320px;
+  background:
+    linear-gradient(rgba(0,240,255,.06) 1px,transparent 1px) 0 0/40px 40px,
+    linear-gradient(90deg,rgba(0,240,255,.06) 1px,transparent 1px) 0 0/40px 40px,
+    radial-gradient(ellipse at 50% 50%,rgba(0,240,255,.08),transparent 70%);
+  border-radius:var(--radius);
+  border:1px dashed var(--border-2);
+  display:grid;place-items:center;
+}
+.core-node{
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,rgba(0,240,255,.35),rgba(168,85,247,.25) 70%);
+  border:1px solid rgba(0,240,255,.4);
+  display:grid;place-items:center;position:relative;
+  box-shadow:0 0 40px rgba(0,240,255,.25),inset 0 0 30px rgba(0,240,255,.15);
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-weight:700;font-size:13px;text-align:center;
+}
+.sat-node{
+  position:absolute;width:80px;height:48px;border-radius:10px;
+  background:var(--bg-3);border:1px solid var(--border-2);
+  display:grid;place-items:center;
+  font-size:10px;font-family:ui-monospace,"SFMono-Regular","Menlo","Monaco","Consolas","Courier New",monospace;color:var(--text-2);text-align:center;padding:4px;
+}
+.sat-node::before{
+  content:"";position:absolute;width:2px;height:40px;
+  background:linear-gradient(180deg,rgba(0,240,255,.4),transparent);
+}
+.sat-node.s1{top:10%;left:50%;transform:translateX(-50%)}
+.sat-node.s1::before{bottom:-40px;left:50%;transform:translateX(-50%)}
+.sat-node.s2{top:50%;right:4%;transform:translateY(-50%)}
+.sat-node.s2::before{left:-40px;top:50%;transform:translateY(-50%);width:40px;height:2px;background:linear-gradient(90deg,transparent,rgba(0,240,255,.4))}
+.sat-node.s3{bottom:10%;left:50%;transform:translateX(-50%)}
+.sat-node.s3::before{top:-40px;left:50%;transform:translateX(-50%);background:linear-gradient(0deg,rgba(168,85,247,.4),transparent)}
+.sat-node.s4{top:50%;left:4%;transform:translateY(-50%)}
+.sat-node.s4::before{right:-40px;top:50%;transform:translateY(-50%);width:40px;height:2px;background:linear-gradient(90deg,rgba(168,85,247,.4),transparent)}
+
+/* ================= USE CASES / DEPLOYED AGENTS ================= */
+.usecases{background:var(--bg)}
+.uc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.uc-card{
+  border-radius:var(--radius-lg);overflow:hidden;
+  border:1px solid var(--border);background:var(--surface);
+  transition:all .3s;
+}
+.uc-card:hover{transform:translateY(-4px);border-color:var(--cyan);box-shadow:0 0 60px rgba(0,240,255,.1)}
+.uc-img{
+  position:relative;aspect-ratio:16/10;overflow:hidden;
+  background:linear-gradient(135deg,#051228,#0B2152);
+}
+.uc-img::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 30%,rgba(0,240,255,.45),transparent 60%),
+             radial-gradient(circle at 70% 80%,rgba(168,85,247,.3),transparent 60%);
+  mix-blend-mode:screen;
+}
+.uc-img.u2::after{background:radial-gradient(circle at 60% 40%,rgba(59,130,246,.5),transparent 60%),radial-gradient(circle at 20% 80%,rgba(0,240,255,.2),transparent 60%)}
+.uc-img.u3::after{background:radial-gradient(circle at 50% 50%,rgba(168,85,247,.45),transparent 60%),radial-gradient(circle at 80% 20%,rgba(236,72,153,.25),transparent 60%)}
+.uc-body{padding:24px}
+.uc-body h3{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-size:20px;font-weight:700;margin-bottom:10px}
+.uc-body p{font-size:14px;color:var(--text-2);line-height:1.7;margin-bottom:18px}
+.uc-meta{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:16px}
+.uc-meta span{font-size:11px;font-family:ui-monospace,"SFMono-Regular","Menlo","Monaco","Consolas","Courier New",monospace;color:var(--text-3);letter-spacing:.06em}
+
+/* ================= INTERACTIVE CTA (PURPLE GLOW) ================= */
+.cta{
+  padding:120px 0;position:relative;overflow:hidden;
+  background:
+    radial-gradient(800px 400px at 50% 50%, rgba(168,85,247,.35), transparent 60%),
+    radial-gradient(600px 300px at 30% 60%, rgba(0,240,255,.18), transparent 60%),
+    var(--bg-2);
+}
+.cta-card{
+  position:relative;z-index:2;
+  max-width:900px;margin:0 auto;text-align:center;
+  padding:72px;border-radius:28px;
+  border:1px solid rgba(168,85,247,.3);
+  background:
+    linear-gradient(180deg,rgba(168,85,247,.1),rgba(0,240,255,.05)),
+    var(--bg-3);
+  box-shadow:0 0 100px rgba(168,85,247,.2);
+}
+.cta-card h2{
+  font-size:52px;margin-bottom:20px;
+  background:linear-gradient(135deg,#fff 0%,var(--purple-2) 50%,var(--cyan) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.cta-card > p{font-size:18px;color:var(--text-2);max-width:600px;margin:0 auto 40px;line-height:1.7}
+.cta-actions{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.btn-purple{
+  background:linear-gradient(135deg,var(--purple),#7C3AED);
+  color:#fff;
+  box-shadow:0 4px 24px rgba(168,85,247,.4), inset 0 1px 0 rgba(255,255,255,.2);
+}
+.btn-purple:hover{transform:translateY(-1px);box-shadow:0 8px 40px rgba(168,85,247,.55)}
+
+/* ================= FOOTER ================= */
+.footer{
+  padding:60px 0 40px;
+  border-top:1px solid rgba(30,58,95,.5);
+  background:var(--bg);
+}
+.foot-top{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:60px;margin-bottom:48px;
+}
+.foot-brand p{font-size:14px;color:var(--text-3);margin:16px 0 20px;line-height:1.7;max-width:300px}
+.socials{display:flex;gap:10px}
+.socials a{
+  width:36px;height:36px;border-radius:9px;
+  display:grid;place-items:center;
+  border:1px solid var(--border);color:var(--text-3);font-size:14px;
+  transition:all .2s;
+}
+.socials a:hover{color:var(--cyan);border-color:var(--cyan)}
+.foot-col h5{
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-weight:600;font-size:13px;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--text);
+  margin-bottom:18px;
+}
+.foot-col ul{list-style:none;display:flex;flex-direction:column;gap:12px}
+.foot-col a{font-size:14px;color:var(--text-3);transition:color .2s}
+.foot-col a:hover{color:var(--text)}
+.foot-bot{
+  display:flex;justify-content:space-between;align-items:center;
+  padding-top:28px;border-top:1px solid rgba(30,58,95,.4);
+  font-size:13px;color:var(--text-3);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width:1024px){
+  .hero-inner{grid-template-columns:1fr;gap:60px}
+  .hero-copy h1{font-size:52px}
+  .cap-grid{grid-template-columns:repeat(2,1fr)}
+  .showcase-grid{grid-template-columns:repeat(2,1fr)}
+  .tech-inner{grid-template-columns:1fr;gap:48px}
+  .uc-grid{grid-template-columns:repeat(2,1fr)}
+  .logos-row{grid-template-columns:repeat(3,1fr);gap:30px}
+  .foot-top{grid-template-columns:1fr 1fr;gap:40px}
+  .sec-head h2{font-size:40px}
+  .cta-card{padding:52px 36px}
+  .cta-card h2{font-size:40px}
+}
+@media (max-width:680px){
+  .section{padding:72px 0}
+  .nav-links{display:none}
+  .hero-copy h1{font-size:40px}
+  .hero-sub{font-size:16px}
+  .cap-grid{grid-template-columns:1fr}
+  .showcase-grid{grid-template-columns:1fr}
+  .stat-row{grid-template-columns:1fr}
+  .uc-grid{grid-template-columns:1fr}
+  .logos-row{grid-template-columns:repeat(2,1fr)}
+  .foot-top{grid-template-columns:1fr;gap:36px}
+  .foot-bot{flex-direction:column;gap:16px;text-align:center}
+  .sec-head h2{font-size:32px}
+  .tech-left h2{font-size:32px}
+  .cta-card{padding:40px 24px}
+  .cta-card h2{font-size:32px}
+  .stat-big .n{font-size:44px}
+  .hero{padding:48px 0 80px}
+}
+</style>
+</head>
+<body>
+
+<!-- ================ NAVBAR ================ -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="logo" href="#">
+      <span class="logo-mark"></span>
+      <span>NextBot<span style="color:var(--cyan)">.AI</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#capabilities" class="active">Capabilities</a>
+      <a href="#showcase">Showcase</a>
+      <a href="#tech">Platform</a>
+      <a href="#usecases">Use Cases</a>
+      <a href="#cta">Pricing</a>
+    </div>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Get started →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ================ HERO ================ -->
+<section class="hero">
+  <div class="grid-bg"></div>
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow">NextBot · Autonomous AI Platform</span>
+      <h1 class="h-tag">
+        Bridging Human <span class="grad">Cognition</span>,<br>
+        AI-Driven <span class="grad">Solutions</span>
+      </h1>
+      <p class="hero-sub">
+        Deploy production-grade autonomous agents engineered for seamless adoption into
+        enterprise workflows — proactive human-in-the-loop cognition, hardened security,
+        and limitless horizontal scale at mission-critical latency.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="#">Start building free</a>
+        <a class="btn btn-ghost btn-lg" href="#">▶ Watch demo (2:14)</a>
+      </div>
+      <div class="hero-social-proof">
+        <div class="avatars">
+          <span style="background:linear-gradient(135deg,#06B6D4,#3B82F6)">JK</span>
+          <span style="background:linear-gradient(135deg,#8B5CF6,#EC4899)">MR</span>
+          <span style="background:linear-gradient(135deg,#10B981,#06B6D4)">SL</span>
+          <span style="background:linear-gradient(135deg,#F59E0B,#EF4444)">AT</span>
+        </div>
+        <div>
+          <div class="stars">★★★★★</div>
+          <div class="hero-proof-text">Loved by <b>2,400+ teams</b> · 4.9/5 on G2</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="hero-mockup">
+        <div class="mockup-header">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="mockup-title">dashboard.nextbot.ai / orchestration</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-screen">
+            <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=futuristic%20AI%20orchestration%20dashboard%20with%20cyan%20neon%20glow%2C%20dark%20blue%20holographic%20interface%2C%20data%20visualization%2C%20hud%20style%2C%208k%20render&image_size=landscape_16_9" alt="AI Dashboard">
+            <div class="scan-line"></div>
+          </div>
+          <div class="mockup-stats">
+            <div class="stat-chip">
+              <div class="label">Active agents</div>
+              <div class="value cyan">12,847</div>
+            </div>
+            <div class="stat-chip">
+              <div class="label">Avg. response</div>
+              <div class="value purple">240ms</div>
+            </div>
+            <div class="stat-chip">
+              <div class="label">Uptime SLA</div>
+              <div class="value" style="color:var(--green)">99.99%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo strip -->
+  <div class="logos container">
+    <div class="logos-label">Pioneering teams already deploying with NextBot</div>
+    <div class="logos-row">
+      <div class="logo-item">NOVATECH</div>
+      <div class="logo-item">◆ HELIOS</div>
+      <div class="logo-item">QUANTOR</div>
+      <div class="logo-item">AURION</div>
+      <div class="logo-item">✦ LUMEN</div>
+      <div class="logo-item">VERTEX</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================ CAPABILITIES ================ -->
+<section class="section capabilities" id="capabilities">
+  <div class="grid-bg"></div>
+  <div class="container" style="position:relative;z-index:2">
+    <div class="sec-head left">
+      <span class="eyebrow">Core Capabilities</span>
+      <h2 class="h-tag" style="font-size:42px">Engineered to internalize engineers' cogency</h2>
+      <p>Every building block of the NextBot platform is designed for deterministic behavior
+        with emergent reasoning — delivering predictable, auditable, and explainable autonomy
+        at every layer of the stack.</p>
+    </div>
+
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="cap-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <h3>Autonomous Orchestration</h3>
+        <p>Self-directed multi-agent workflows with dynamic task decomposition, priority queuing,
+          and deadlock resolution — no babysitting required.</p>
+        <a class="cap-link" href="#">Explore orchestration</a>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon" style="color:var(--purple-2)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Limitless Scale, Hardened Security</h3>
+        <p>SOC 2 Type II certified, BYOK encryption, zero-trust RBAC, and private VPC peering
+          — scale to billions of inferences without compromising posture.</p>
+        <a class="cap-link" href="#">Review security docs</a>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon" style="color:var(--green)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5M17 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM7 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
+        </div>
+        <h3>Proactive Human Cognition</h3>
+        <p>Adaptive HITL intervention at high-uncertainty decision points. Human feedback trains
+          the model in-context so agents improve with every loop.</p>
+        <a class="cap-link" href="#">Understand HITL</a>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon" style="color:#93C5FD">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
+        </div>
+        <h3>Enterprise Integrations</h3>
+        <p>200+ native connectors for databases, SaaS, internal tools, and custom MCP servers —
+          plug agents into your existing stack in minutes, not months.</p>
+        <a class="cap-link" href="#">Browse integrations</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================ PRODUCT SHOWCASE ================ -->
+<section class="section showcase" id="showcase">
+  <div class="container">
+    <div class="sec-head">
+      <span class="eyebrow">Product Showcase</span>
+      <h2 class="h-tag">Live human interaction, shipped to production</h2>
+      <p>Every product module is ready for immediate deployment. Drag, configure, and ship —
+        the runtime handles the rest.</p>
+    </div>
+
+    <div class="showcase-grid">
+      <div class="show-card">
+        <div class="show-thumb c1"></div>
+        <div class="show-body">
+          <span class="tag">Neural</span>
+          <h4>Neural Reasoning Studio</h4>
+          <p>Design, test, and evaluate agent chains with instant visual feedback and grounded scoring.</p>
+        </div>
+      </div>
+      <div class="show-card">
+        <div class="show-thumb c2"></div>
+        <div class="show-body">
+          <span class="tag purple">Memory</span>
+          <h4>Persistent Memory Graph</h4>
+          <p>Semantic long-term memory with vector-native recall, pruning, and fine-grained knowledge editing.</p>
+        </div>
+      </div>
+      <div class="show-card">
+        <div class="show-thumb c3"></div>
+        <div class="show-body">
+          <span class="tag blue">Observability</span>
+          <h4>Agent Trace Observatory</h4>
+          <p>Per-token telemetry, root-cause analysis, and cost attribution across every agent hop.</p>
+        </div>
+      </div>
+      <div class="show-card">
+        <div class="show-thumb c4"></div>
+        <div class="show-body">
+          <span class="tag pink">Guardrails</span>
+          <h4>Policy Guardrail Engine</h4>
+          <p>Compliance, red-teaming, and output policies enforced at inference-time with zero latency hit.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================ TECH SPECS + STATS ================ -->
+<section class="section tech" id="tech">
+  <div class="container tech-inner">
+    <div class="tech-left">
+      <span class="eyebrow">Technical Leader Scope</span>
+      <h2 class="h-tag">Unleashed in technical leader scope</h2>
+      <p>Purpose-built runtime architecture, model-agnostic inference fabric, and deterministic
+        execution semantics that engineering leaders trust for revenue-critical systems.</p>
+
+      <div class="stat-row">
+        <div class="stat-big">
+          <div class="n">86.6<small>%</small></div>
+          <div class="d">Tasks completed autonomously — no human handoff required.</div>
+        </div>
+        <div class="stat-big">
+          <div class="n">94.6</div>
+          <div class="d">Median quality score vs. expert human baseline on benchmark suite.</div>
+        </div>
+      </div>
+
+      <ul class="feature-list">
+        <li><div><b>Model-agnostic inference</b> — swap any LLM provider in one line; hot-swap at runtime.</div></li>
+        <li><div><b>Deterministic execution</b> — replay any trace with identical inputs for audits.</div></li>
+        <li><div><b>Zero-config deploy</b> — Docker, K8s, Vercel, or private VPC — all supported out of the box.</div></li>
+        <li><div><b>MCP server compatibility</b> — connect any Model Context Protocol server as a tool source.</div></li>
+      </ul>
+    </div>
+
+    <div class="tech-right">
+      <div class="tech-panel">
+        <div class="tech-panel-head">
+          <span class="panel-title">// architecture.mmd</span>
+          <div class="panel-tabs">
+            <button class="active">Graph</button>
+            <button>JSON</button>
+            <button>YAML</button>
+          </div>
+        </div>
+        <div class="tech-body">
+          <div class="diagram">
+            <div class="core-node">NEXTBOT<br>ORCHESTRATOR</div>
+            <div class="sat-node s1">LLM Gateway</div>
+            <div class="sat-node s2">Memory Store</div>
+            <div class="sat-node s3">Tool Bus / MCP</div>
+            <div class="sat-node s4">Policy Engine</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================ DEPLOYED AGENTS / USE CASES ================ -->
+<section class="section usecases" id="usecases">
+  <div class="container">
+    <div class="sec-head">
+      <span class="eyebrow">Deployment Use Cases</span>
+      <h2 class="h-tag">Deployed agents, shipped outcomes</h2>
+      <p>From R&D labs to global operations floors — see how forward-leaning teams are deploying
+        NextBot agents into production today.</p>
+    </div>
+
+    <div class="uc-grid">
+      <div class="uc-card">
+        <div class="uc-img u1"></div>
+        <div class="uc-body">
+          <h3>Autonomous Research Agent</h3>
+          <p>Processes 10K+ papers/week, synthesizes findings, drafts experiments, and flags
+            research breakthroughs to senior scientists.</p>
+          <div class="uc-meta">
+            <span>BIOTECH · R&D</span>
+            <span style="color:var(--cyan)">Case study →</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="uc-card">
+        <div class="uc-img u2"></div>
+        <div class="uc-body">
+          <h3>FinOps Optimization Copilot</h3>
+          <p>Continuously analyzes cloud spend across 400+ accounts, implements reservations,
+            and surfaces savings with audit-ready reasoning.</p>
+          <div class="uc-meta">
+            <span>FORTUNE 500 · FINOPS</span>
+            <span style="color:var(--cyan)">Case study →</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="uc-card">
+        <div class="uc-img u3"></div>
+        <div class="uc-body">
+          <h3>Customer Success Co-Pilot</h3>
+          <p>Triages, diagnoses, and resolves 73% of Tier-1 tickets autonomously, escalating
+            with complete context to human specialists.</p>
+          <div class="uc-meta">
+            <span>SAAS · CS</span>
+            <span style="color:var(--cyan)">Case study →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================ INTERACTIVE CTA (PURPLE GLOW) ================ -->
+<section class="cta" id="cta">
+  <div class="cta-card">
+    <span class="eyebrow" style="color:var(--purple-2);border-color:rgba(168,85,247,.3);background:rgba(168,85,247,.08)">
+      <style></style>
+      Start shipping today
+    </span>
+    <h2 class="h-tag">Deploy your first autonomous agent in under 90 seconds</h2>
+    <p>Free tier includes 10,000 inferences/month, unlimited agents, full observability suite,
+      and priority community support. No credit card required.</p>
+    <div class="cta-actions">
+      <a class="btn btn-purple btn-lg" href="#">Create free workspace</a>
+      <a class="btn btn-ghost btn-lg" href="#">Talk to sales</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================ FOOTER ================ -->
+<footer class="footer">
+  <div class="container">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a class="logo" href="#">
+          <span class="logo-mark"></span>
+          <span>NextBot<span style="color:var(--cyan)">.AI</span></span>
+        </a>
+        <p>Autonomous AI platform engineered for seamless adoption, proactive cognition,
+          and mission-critical scale.</p>
+        <div class="socials">
+          <a href="#" aria-label="Twitter">𝕏</a>
+          <a href="#" aria-label="GitHub">◉</a>
+          <a href="#" aria-label="LinkedIn">in</a>
+          <a href="#" aria-label="Discord">⌬</a>
+        </div>
+      </div>
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="#">Capabilities</a></li>
+          <li><a href="#">Integrations</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">Roadmap</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Developers</h5>
+        <ul>
+          <li><a href="#">Documentation</a></li>
+          <li><a href="#">API Reference</a></li>
+          <li><a href="#">MCP Server SDK</a></li>
+          <li><a href="#">GitHub</a></li>
+          <li><a href="#">Status ↗</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Company</h5>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Customers</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <div>© 2026 NextBot AI, Inc. All rights reserved.</div>
+      <div style="display:flex;gap:28px">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Security</a>
+        <a href="#">Cookies</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Smooth fade-in on scroll
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.style.opacity=1;
+        e.target.style.transform='translateY(0)';
+      }
+    });
+  },{threshold:.1});
+  document.querySelectorAll('.cap-card,.show-card,.uc-card,.stat-big,.cta-card').forEach((el,i)=>{
+    el.style.opacity=0;
+    el.style.transform='translateY(20px)';
+    el.style.transition=`opacity .6s ${i*60}ms, transform .6s ${i*60}ms`;
+    io.observe(el);
+  });
+
+  // Nav active link on scroll
+  const links=document.querySelectorAll('.nav-links a');
+  const sections=Array.from(links).map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  window.addEventListener('scroll',()=>{
+    const y=window.scrollY+120;
+    let idx=-1;
+    sections.forEach((s,i)=>{ if(s.offsetTop<=y) idx=i; });
+    links.forEach(l=>l.classList.remove('active'));
+    if(idx>=0) links[idx].classList.add('active');
+  });
+</script>
+</body>
+</html>
