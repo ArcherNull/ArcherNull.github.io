@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0c0d0f" />
+    <title>郑萌 · Amazon Visual Designer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+    <style>
+      html, body { margin: 0; background: #0c0d0f; color: #e8e7e3; }
+      #root:empty { min-height: 100vh; }
+      .boot {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse 70% 55% at 72% 28%, rgba(38, 72, 78, 0.45), transparent 58%),
+          radial-gradient(ellipse 50% 40% at 18% 78%, rgba(201, 255, 56, 0.06), transparent 55%),
+          linear-gradient(160deg, #07111b 0%, #0c0d0f 48%, #080a0d 100%);
+        font-family: Manrope, Arial, sans-serif;
+        transition: opacity 0.45s ease, visibility 0.45s ease;
+      }
+      .boot.isLeaving {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .bootGrid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.045;
+        background-image:
+          linear-gradient(rgba(158, 181, 181, 0.35) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(158, 181, 181, 0.35) 1px, transparent 1px);
+        background-size: 90px 90px;
+        pointer-events: none;
+      }
+      .bootGlow {
+        position: absolute;
+        width: 48vw;
+        height: 48vw;
+        right: -10vw;
+        top: -14vw;
+        border-radius: 50%;
+        background: #c9ff38;
+        filter: blur(170px);
+        opacity: 0.07;
+        pointer-events: none;
+      }
+      .bootInner {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+        text-align: center;
+        padding: 24px;
+      }
+      .bootMark {
+        display: grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #c9ff38;
+        color: #10130c;
+        font-weight: 800;
+        font-size: 20px;
+        letter-spacing: -0.08em;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+        animation: bootPulse 1.8s ease-in-out infinite;
+      }
+      .bootBrand {
+        margin: 0;
+        font-size: clamp(42px, 8vw, 72px);
+        font-weight: 800;
+        letter-spacing: -0.075em;
+        line-height: 0.9;
+        color: #f3f4f1;
+      }
+      .bootBrand span {
+        color: #c9ff38;
+      }
+      .bootMeta {
+        margin: 0;
+        font-family: 'DM Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        color: #85878d;
+        text-transform: uppercase;
+      }
+      .bootMeta em {
+        font-style: normal;
+        color: #c9ff38;
+      }
+      .bootTrack {
+        width: min(220px, 56vw);
+        height: 2px;
+        margin-top: 4px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+      .bootBar {
+        width: 40%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, transparent, #c9ff38, transparent);
+        animation: bootSlide 1.15s ease-in-out infinite;
+      }
+      @keyframes bootPulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35); }
+        50% { transform: scale(1.045); box-shadow: 0 22px 60px rgba(201, 255, 56, 0.18); }
+      }
+      @keyframes bootSlide {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(320%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .bootMark, .bootBar { animation: none; }
+        .bootBar { width: 100%; background: #c9ff38; opacity: 0.7; }
+        .boot.isLeaving { transition: none; }
+      }
+    </style>
+    <script type="module" crossorigin src="/meng/assets/index-BUeAbbd5.js"></script>
+    <link rel="stylesheet" crossorigin href="/meng/assets/index-GV-B8tn7.css">
+  </head>
+  <body>
+    <div id="boot" class="boot" role="status" aria-live="polite" aria-label="页面加载中">
+      <div class="bootGrid" aria-hidden="true"></div>
+      <div class="bootGlow" aria-hidden="true"></div>
+      <div class="bootInner">
+        <div class="bootMark">ZM</div>
+        <p class="bootBrand">MENG<span>.</span></p>
+        <p class="bootMeta"><em>01</em> · Loading portfolio</p>
+        <div class="bootTrack" aria-hidden="true"><div class="bootBar"></div></div>
+      </div>
+    </div>
+    <div id="root"></div>
+  </body>
+</html>
