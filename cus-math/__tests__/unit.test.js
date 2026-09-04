@@ -171,6 +171,13 @@ describe('CusMath 实例方法 - 单元测试', () => {
     it('连续减加：-0.57-0.3+1', () => {
       expect(math.getExpParts('-0.57-0.3+1')).toEqual(['-0.57', '-', '0.3', '+', '1'])
     })
+
+    it('二元加号不能吞进右侧数字（小程序 lookbehind 失效回归）', () => {
+      // 错误拆解会得到 ['100','+379.52']，加减阶段报「存在非数学运算符【+379.52】」
+      expect(math.getExpParts('100+379.52')).toEqual(['100', '+', '379.52'])
+      expect(math.getExpParts('+10+379.52')).toEqual(['+10', '+', '379.52'])
+      expect(math.getExpParts('10+20+379.52')).toEqual(['10', '+', '20', '+', '379.52'])
+    })
   })
 
   describe('isNumber', () => {

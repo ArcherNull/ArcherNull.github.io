@@ -170,13 +170,35 @@ export class CusMath {
 
     /**
      * 拆解表达式：支持负数、一元正负号、科学计数法
-     * 一元负号：开头或运算符之后（如 *-2）
+     * 一元正负号：开头或运算符之后（如 *-2、+379.52）
+     * 不用 lookbehind：小程序等引擎对 (?<=) 支持差；若写成 [+-]?\d+
+     * 会把二元 + 吞进数字，例如 100+379.52 → ['100','+379.52'] 触发「非数学运算符」
      */
     getExpParts(expStr) {
         const s = this.normalizeSigns(expStr)
         if (!s) return []
-        // 数字（可带一元+/-）或运算符
-        return s.match(/(?:(?<=^|[+\-*/])[+-])?\d*\.?\d+(?:[eE][+-]?\d+)?|[+\-*/]/g) || []
+
+        const raw = s.match(/\d*\.?\d+(?:[eE][+-]?\d+)?|[+\-*/]/g) || []
+        const parts = []
+        const isOp = t => t === '+' || t === '-' || t === '*' || t === '/'
+
+        for (let i = 0; i < raw.length; i++) {
+            const token = raw[i]
+            const next = raw[i + 1]
+            const isUnary =
+                (token === '+' || token === '-') &&
+                next != null &&
+                !isOp(next) &&
+                (parts.length === 0 || isOp(parts[parts.length - 1]))
+
+            if (isUnary) {
+                parts.push(token + next)
+                i++
+            } else {
+                parts.push(token)
+            }
+        }
+        return parts
     }
 
     validateExpression(str) {

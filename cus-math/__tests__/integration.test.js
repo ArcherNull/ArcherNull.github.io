@@ -20,6 +20,13 @@ describe('CusMath 集成测试', () => {
       expect(new CusMath().expression('0.3/0.1').end()).toBe(3)
     })
 
+    it('正数加法不把二元 + 当成数字前缀（+379.52 回归）', () => {
+      expect(math.expression('100+379.52').end()).toBe(479.52)
+      expect(new CusMath().expression('+10+379.52').end()).toBe(389.52)
+      expect(new CusMath().expression('(100)+(279.52)').end()).toBe(379.52)
+      expect(new CusMath().expression('100+(50+329.52)').end()).toBe(479.52)
+    })
+
     it('乘除优先于加减', () => {
       expect(math.expression('1+2*3').end()).toBe(7)
       expect(new CusMath().expression('10-2*3').end()).toBe(4)
