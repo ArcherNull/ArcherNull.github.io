@@ -1,0 +1,333 @@
+:root {
+  --bg-0: #0f1419;
+  --bg-1: #171e26;
+  --bg-2: #1e2732;
+  --line: rgba(148, 173, 199, 0.18);
+  --text: #e8eef5;
+  --muted: #8fa3b8;
+  --accent: #2dd4bf;
+  --accent-2: #38bdf8;
+  --danger: #fb7185;
+  --warn: #fbbf24;
+  --ok: #34d399;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --radius: 12px;
+  --font: 'DM Sans', 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(45, 212, 191, 0.12), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(56, 189, 248, 0.1), transparent 50%),
+    linear-gradient(160deg, #0b1015 0%, #121820 45%, #0e141b 100%);
+}
+
+#app {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background: rgba(23, 30, 38, 0.78);
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, var(--accent), transparent 60%),
+    linear-gradient(225deg, var(--accent-2), #0ea5e9 70%);
+  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.35), 0 8px 24px rgba(14, 165, 233, 0.25);
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brand-text strong {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.brand-text span {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.timings {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.timing-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(15, 20, 25, 0.55);
+  min-width: 96px;
+}
+
+.timing-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.timing-item strong {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(15, 20, 25, 0.65);
+}
+
+.search-box input {
+  width: min(220px, 28vw);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 8px 12px;
+  font: inherit;
+}
+
+.search-meta {
+  min-width: 64px;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+  text-align: center;
+}
+
+.btn-group,
+.theme-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+button,
+select {
+  font: inherit;
+  cursor: pointer;
+}
+
+button {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(46, 58, 72, 0.9), rgba(30, 39, 50, 0.95));
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: border-color 0.2s ease, transform 0.15s ease, background 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: rgba(45, 212, 191, 0.55);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: transparent;
+}
+
+.theme-switch span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.theme-switch select {
+  border: 1px solid var(--line);
+  background: var(--bg-1);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 12px 14px 8px;
+}
+
+#tableContainer {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  background: var(--bg-1);
+}
+
+.loading {
+  position: absolute;
+  inset: 12px 14px 8px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background: rgba(12, 17, 23, 0.72);
+  backdrop-filter: blur(6px);
+  transition: opacity 0.25s ease;
+}
+
+.loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 36px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(23, 30, 38, 0.95);
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(45, 212, 191, 0.2);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 18px 12px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  background: rgba(15, 20, 25, 0.55);
+}
+
+.status-bar .hint {
+  opacity: 0.85;
+}
+
+body[data-theme='DEFAULT'],
+body[data-theme='ARCO'],
+body[data-theme='BRIGHT'],
+body[data-theme='SIMPLIFY'] {
+  --page-tint: rgba(255, 255, 255, 0.02);
+}
+
+body[data-theme='DARK'] {
+  --page-tint: rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .timings {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .timing-item {
+    flex: 1;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+
+  .status-bar {
+    flex-direction: column;
+  }
+}

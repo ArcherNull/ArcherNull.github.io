@@ -1,0 +1,24 @@
+{
+  "name": "vtable-demo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "predev": "node scripts/build-wasm.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/build-wasm.mjs",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@visactor/vtable": "^1.26.6",
+    "@visactor/vtable-plugins": "^1.26.6",
+    "@visactor/vtable-search": "^1.26.6",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5",
+    "wabt": "^1.0.39"
+  }
+}
