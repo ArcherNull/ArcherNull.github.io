@@ -25,7 +25,7 @@ export default defineConfig({
     include: ['exceljs', '@visactor/vtable', '@visactor/vtable-search']
   },
   build: {
-    outDir: 'dist',
+    outDir: 'build',
     sourcemap: false,
     chunkSizeWarningLimit: 4000,
     assetsInlineLimit: 0,

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VTable Demo · 15万行 × 500列</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="./assets/index-cJARN5u9.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CFqh4y3T.css">
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <div class="brand-text">
+            <strong>VTable Lab</strong>
+            <span id="metaLabel">准备中…</span>
+          </div>
+        </div>
+
+        <div class="timings" aria-label="性能计时">
+          <div class="timing-item">
+            <span class="timing-label">假数据生成</span>
+            <strong id="timingGen">—</strong>
+          </div>
+          <div class="timing-item">
+            <span class="timing-label">表格渲染</span>
+            <strong id="timingRender">—</strong>
+          </div>
+          <div class="timing-item">
+            <span class="timing-label">总耗时</span>
+            <strong id="timingTotal">—</strong>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="search-box">
+            <input id="searchInput" type="search" placeholder="搜索中文/英文…" autocomplete="off" />
+            <button id="searchBtn" type="button" title="搜索">搜</button>
+            <button id="searchPrevBtn" type="button" title="上一个" disabled>‹</button>
+            <button id="searchNextBtn" type="button" title="下一个" disabled>›</button>
+            <span id="searchMeta" class="search-meta"></span>
+            <button id="searchClearBtn" type="button" class="ghost" title="清除" disabled>清</button>
+          </div>
+
+          <div class="btn-group">
+            <button id="exportCsvBtn" type="button">导出 CSV</button>
+            <button id="exportXlsxBtn" type="button">导出 XLSX</button>
+          </div>
+
+          <label class="theme-switch">
+            <span>主题</span>
+            <select id="themeSelect">
+              <option value="ARCO">ARCO</option>
+              <option value="DEFAULT">DEFAULT</option>
+              <option value="DARK">DARK</option>
+              <option value="BRIGHT">BRIGHT</option>
+              <option value="SIMPLIFY">SIMPLIFY</option>
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <main class="stage">
+        <div id="loading" class="loading">
+          <div class="loading-card">
+            <div class="spinner"></div>
+            <p id="loadingText">正在生成 15 万行假数据…</p>
+          </div>
+        </div>
+        <div id="tableContainer"></div>
+      </main>
+
+      <footer class="status-bar">
+        <span id="statusText">就绪</span>
+        <span class="hint">支持：多级表头 · 行序号 · 列宽拖拽 · 列拖拽换位 · 排序 · 底部合计冻结</span>
+      </footer>
+    </div>
+  </body>
+</html>
