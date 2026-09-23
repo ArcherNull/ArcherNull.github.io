@@ -1,0 +1,1 @@
+import{n as e,t}from"./jsx-runtime-Dw3XDvSP.js";import{g as n,h as r}from"./user-gQKy1cAM.js";import{t as i}from"./page-container-DFc8TWRi.js";var a=t();function o(){let{t}=e();return(0,a.jsx)(i,{title:t(`cart.title`),children:(0,a.jsx)(n,{className:`px-5 py-8`,children:(0,a.jsx)(r,{className:`block text-base text-foreground`,children:t(`cart.text`)})})})}export{o as default};
