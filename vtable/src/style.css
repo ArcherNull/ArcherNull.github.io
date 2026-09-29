@@ -12,8 +12,8 @@
   --ok: #34d399;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
   --radius: 12px;
-  --font: 'DM Sans', 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --mono: ui-monospace, 'Cascadia Code', 'Consolas', 'Courier New', monospace;
 }
 
 * {

@@ -299,6 +299,68 @@
     #faceOverlayCanvas.visible { opacity: 1; }
     #faceOverlayCanvas.fit-cover { object-fit: cover; }
 
+    #watermarkOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    #watermarkOverlay.on { display: block; }
+
+    .btn-record.recording {
+      background: var(--danger);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(232, 93, 93, 0.35);
+      animation: recordPulse 1.2s ease-in-out infinite;
+    }
+
+    .btn-record.recording:hover:not(:disabled) {
+      background: #f07070;
+    }
+
+    @keyframes recordPulse {
+      0%, 100% { box-shadow: 0 4px 16px rgba(232, 93, 93, 0.35); }
+      50% { box-shadow: 0 4px 22px rgba(232, 93, 93, 0.65); }
+    }
+
+    .path-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .path-row .path-display {
+      flex: 1;
+      min-width: 0;
+      padding: 7px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: var(--bg-deep);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .path-row .path-display.set {
+      color: var(--accent);
+      border-color: rgba(30, 200, 165, 0.35);
+    }
+
+    .footer-head .footer-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
     .scan-mask {
       position: absolute;
       inset: 0;
@@ -513,6 +575,37 @@
       height: 80vh;
       max-width: 80vw;
       max-height: 80vh;
+    }
+
+    .modal-box.modal-box-video {
+      width: min(960px, 94vw);
+      height: min(720px, 88vh);
+      max-width: 94vw;
+      max-height: 88vh;
+    }
+
+    #videoPreviewModal {
+      z-index: 125;
+    }
+
+    #videoPreviewBody {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #060809;
+      padding: 12px;
+    }
+
+    #videoPreviewPlayer {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      background: #000;
+      border-radius: 6px;
+      outline: none;
     }
 
     .preview-head-actions {
@@ -1211,11 +1304,26 @@
       overflow: hidden;
     }
 
-    .shot img, .shot canvas {
+    .shot img, .shot canvas, .shot video {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
+    }
+
+    .shot.shot-video .shot-thumb::after {
+      content: "视频";
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.58rem;
+      font-family: var(--font-mono);
+      background: rgba(232, 93, 93, 0.9);
+      color: #fff;
+      pointer-events: none;
+      z-index: 1;
     }
 
     .shot .shot-name {
@@ -1916,6 +2024,7 @@
               <span class="ac-num" id="autoCaptureCountdownVal">5</span>
               <span class="ac-label">秒后自动拍摄</span>
             </div>
+            <canvas id="watermarkOverlay" aria-hidden="true"></canvas>
           </div>
           <div class="viewport-overlay sdk-interactive" id="overlay">
             <h2>正在加载…</h2>
@@ -1933,9 +2042,9 @@
           </div>
           <div class="primary-actions">
             <button class="btn btn-primary" id="btnOpen">打开摄像头</button>
-            <button class="btn" id="btnClose" disabled>关闭</button>
             <button class="btn" id="btnPause" disabled>暂停</button>
             <button class="btn btn-primary" id="btnCapture" disabled>拍摄</button>
+            <button class="btn btn-record" id="btnRecord" disabled title="录制视频到本地">录制</button>
             <button class="btn" id="btnRotate" disabled title="顺时针旋转 90°">旋转</button>
             <button class="btn btn-torch" id="btnTorch" disabled title="打开手电筒" aria-pressed="false">
               <!-- 关闭态：空心手电筒 -->
@@ -2182,6 +2291,74 @@
               </div>
               <button class="btn btn-sm" id="btnResetZoom" disabled>重置缩放</button>
             </div>
+            <div class="section">
+              <div class="section-title">水印添加</div>
+              <div class="toggle-row">
+                <span>启用水印</span>
+                <label class="switch">
+                  <input type="checkbox" id="chkWatermark" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div id="watermarkFields" style="display:none;">
+                <div class="field">
+                  <label>水印文案</label>
+                  <input type="text" id="inpWatermarkText" value="仅供办理业务使用" maxlength="64" placeholder="输入水印文字" />
+                </div>
+                <div class="field">
+                  <label>水印展示位置</label>
+                  <select id="selWatermarkPos">
+                    <option value="tl">左上</option>
+                    <option value="tr">右上</option>
+                    <option value="bl">左下</option>
+                    <option value="br" selected>右下</option>
+                    <option value="center">正中</option>
+                    <option value="fill">满屏</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>水印颜色</label>
+                  <input type="color" id="inpWatermarkColor" value="#ffffff" />
+                </div>
+                <p class="hint" style="line-height:1.5;margin-top:4px;">
+                  开启后预览画面会显示水印；拍摄图片与录制视频也会写入该水印。
+                </p>
+              </div>
+            </div>
+            <div class="section">
+              <div class="section-title">录制</div>
+              <div class="field">
+                <label>录制时长限制（分钟）</label>
+                <input type="number" id="inpRecordLimitMin" value="10" min="1" max="90" step="1" />
+              </div>
+              <p class="hint" style="line-height:1.45;margin-top:2px;">
+                最长 90 分钟，默认 10 分钟。到达上限后自动分段：当前段写入相册并继续录制下一段。
+              </p>
+              <div class="toggle-row">
+                <span>结束录制自动保存到本地</span>
+                <label class="switch">
+                  <input type="checkbox" id="chkRecordAutoSave" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <p class="hint" style="line-height:1.45;margin-top:2px;">
+                已选存储目录时，结束录制会直接写入该目录；未选目录且开启本开关时使用浏览器下载。
+              </p>
+            </div>
+            <div class="section">
+              <div class="section-title">文件存储</div>
+              <div class="field">
+                <label>本地存储路径</label>
+                <div class="path-row">
+                  <div class="path-display" id="storagePathDisplay" title="未选择">未选择目录</div>
+                  <button type="button" class="btn btn-sm" id="btnPickStoragePath">选择</button>
+                  <button type="button" class="btn btn-sm" id="btnClearStoragePath">清除</button>
+                </div>
+              </div>
+              <p class="hint" style="line-height:1.45;margin-top:4px;">
+                选择目录后，拍摄图片、录制视频与「压缩下载」的 zip 都会保存到该文件夹；未选择时回退为浏览器下载。
+              </p>
+            </div>
           </div>
 
           <!-- jscanify 扫描 -->
@@ -2348,10 +2525,13 @@
     <footer class="footer">
       <div class="footer-head">
         <h3>拍摄记录 · <span id="shotCount">0</span></h3>
-        <button class="btn btn-sm btn-ghost" id="btnClearShots">清空相册</button>
+        <div class="footer-actions">
+          <button class="btn btn-sm" id="btnZipShots">压缩下载</button>
+          <button class="btn btn-sm btn-ghost" id="btnClearShots">清空相册</button>
+        </div>
       </div>
       <div class="gallery" id="gallery">
-        <div class="empty-hint" id="galleryEmpty" style="width:100%;">拍摄的图片将显示在这里</div>
+        <div class="empty-hint" id="galleryEmpty" style="width:100%;">拍摄的图片与录制的视频将显示在这里</div>
       </div>
     </footer>
   </div>
@@ -2470,6 +2650,21 @@
     </div>
   </div>
 
+  <div class="modal" id="videoPreviewModal">
+    <div class="modal-box modal-box-video">
+      <div class="modal-head">
+        <h3 id="videoPreviewTitle">视频预览</h3>
+        <div class="row" style="margin:0;">
+          <button class="btn btn-sm" id="btnVideoPreviewDownload">下载</button>
+          <button class="btn btn-sm" id="btnCloseVideoPreview">关闭</button>
+        </div>
+      </div>
+      <div id="videoPreviewBody">
+        <video id="videoPreviewPlayer" controls playsinline></video>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-wrap" id="toastWrap"></div>
 
   <script>
@@ -2509,6 +2704,22 @@
     let roiDragging = false;
     let roiStart = null; // {x,y} stage-local
     let roiBusy = false;
+
+    // ── 录制 ──
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordCanvas = null;
+    let recordCtx = null;
+    let recordRaf = null;
+    let recordStream = null;
+    let recordStartedAt = 0;
+    let recordLimitTimer = null;
+    let recordSegmentRestart = false; // 时长上限后自动续录
+    let recordUserStopped = false;
+
+    // ── 本地存储目录（File System Access）──
+    let storageDirHandle = null;
 
     // ── 自动拍摄 ──
     let autoCaptureRunning = false;
@@ -2589,23 +2800,41 @@
       }
     }
 
+    function updateCameraToggleBtn() {
+      const btn = $("btnOpen");
+      if (!btn) return;
+      if (isOpen) {
+        btn.textContent = "关闭摄像头";
+        btn.classList.remove("btn-primary");
+        btn.disabled = false;
+        btn.title = "关闭摄像头";
+      } else {
+        btn.textContent = "打开摄像头";
+        btn.classList.add("btn-primary");
+        btn.disabled = false;
+        btn.title = "打开摄像头";
+      }
+    }
+
     function setCameraControlsEnabled(on) {
       [
-        "btnClose", "btnPause", "btnCapture", "btnRotate", "btnTorch", "btnScanRoi",
+        "btnPause", "btnCapture", "btnRecord", "btnRotate", "btnTorch", "btnScanRoi",
         "btnFetchImage", "btnTakePhoto", "btnStartFetch", "btnStopFetch",
         "btnOpenEditor", "rngZoom", "btnResetZoom"
       ].forEach((id) => {
         const el = $(id);
         if (el) el.disabled = !on;
       });
-      $("btnOpen").disabled = on;
+      updateCameraToggleBtn();
       if (!on) {
+        if (isRecording) stopRecording(true);
         stopAutoCapture();
         stopCodeScan();
         stopRoiSelect();
         setTorchUi(false);
       }
       updateCaptureButtonLabel();
+      updateRecordButtonLabel();
       updateScanActionButtons();
       updateOcrActionButtons();
       updateFaceActionButtons();
@@ -2984,6 +3213,7 @@
       applyBox(videoEl);
       applyBox(highlightCanvas);
       applyBox(faceOverlayCanvas);
+      updateWatermarkPreview();
 
       $("valZoom").textContent = cssZoom.toFixed(1) + "×";
       if (scanMode) applyScanOverlay(scanMode);
@@ -4116,6 +4346,727 @@
       return c;
     }
 
+    // ── 水印 ──
+    function getWatermarkConfig() {
+      const enabled = !!$("chkWatermark")?.checked;
+      const text = ($("inpWatermarkText")?.value || "").trim();
+      const position = $("selWatermarkPos")?.value || "br";
+      const color = $("inpWatermarkColor")?.value || "#ffffff";
+      return { enabled, text, position, color };
+    }
+
+    function updateWatermarkFieldsVisibility() {
+      const on = !!$("chkWatermark")?.checked;
+      const wrap = $("watermarkFields");
+      if (wrap) wrap.style.display = on ? "" : "none";
+      updateWatermarkPreview();
+    }
+
+    /** 视频内容区在舞台上的可视矩形（含旋转 / CSS 缩放），用于对齐水印预览与拍摄 */
+    function getVisualVideoContentRect() {
+      const stage = $("cameraStage");
+      const sw = stage?.clientWidth || 1;
+      const sh = stage?.clientHeight || 1;
+      const swapped = viewRotation % 180 !== 0;
+      const elW = swapped ? sh : sw;
+      const elH = swapped ? sw : sh;
+      const boxLeft = (sw - elW) / 2;
+      const boxTop = (sh - elH) / 2;
+      const vw = videoEl.videoWidth || 1;
+      const vh = videoEl.videoHeight || 1;
+      const fit = videoEl.classList.contains("fit-cover") ? "cover" : "contain";
+      const fitScale = fit === "cover"
+        ? Math.max(elW / vw, elH / vh)
+        : Math.min(elW / vw, elH / vh);
+      const dw = vw * fitScale;
+      const dh = vh * fitScale;
+      const lx = (elW - dw) / 2;
+      const ly = (elH - dh) / 2;
+      const ox = boxLeft + elW / 2;
+      const oy = boxTop + elH / 2;
+      const z = cssZoom || 1;
+      const rad = (viewRotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      const map = (localX, localY) => {
+        const dx = (boxLeft + localX - ox) * z;
+        const dy = (boxTop + localY - oy) * z;
+        return { x: ox + dx * cos - dy * sin, y: oy + dx * sin + dy * cos };
+      };
+
+      const corners = [
+        map(lx, ly),
+        map(lx + dw, ly),
+        map(lx + dw, ly + dh),
+        map(lx, ly + dh)
+      ];
+      const xs = corners.map((c) => c.x);
+      const ys = corners.map((c) => c.y);
+      const left = Math.min(...xs);
+      const top = Math.min(...ys);
+      return {
+        left,
+        top,
+        width: Math.max(1, Math.max(...xs) - left),
+        height: Math.max(1, Math.max(...ys) - top)
+      };
+    }
+
+    function updateWatermarkPreview() {
+      const canvas = $("watermarkOverlay");
+      if (!canvas) return;
+      const cfg = getWatermarkConfig();
+      if (!cfg.enabled || !cfg.text) {
+        canvas.classList.remove("on");
+        const ctx0 = canvas.getContext("2d");
+        if (ctx0 && canvas.width) ctx0.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      const vw = videoEl.videoWidth || 0;
+      const vh = videoEl.videoHeight || 0;
+      if (!vw || !vh) {
+        canvas.classList.remove("on");
+        return;
+      }
+
+      // 与拍摄一致：在「画面朝向校正后」的画布上绘制水印
+      const frameW = viewRotation % 180 !== 0 ? vh : vw;
+      const frameH = viewRotation % 180 !== 0 ? vw : vh;
+      const off = document.createElement("canvas");
+      off.width = frameW;
+      off.height = frameH;
+      drawWatermarkOnCanvas(off.getContext("2d"), frameW, frameH, cfg);
+
+      const visual = getVisualVideoContentRect();
+      canvas.classList.add("on");
+      canvas.style.position = "absolute";
+      canvas.style.left = visual.left + "px";
+      canvas.style.top = visual.top + "px";
+      canvas.style.width = visual.width + "px";
+      canvas.style.height = visual.height + "px";
+      canvas.style.right = "auto";
+      canvas.style.bottom = "auto";
+      canvas.style.inset = "auto";
+      canvas.style.transform = "none";
+      canvas.style.transformOrigin = "center center";
+      canvas.width = frameW;
+      canvas.height = frameH;
+      canvas.getContext("2d").drawImage(off, 0, 0);
+    }
+
+    function drawWatermarkOnCanvas(ctx, width, height, cfg) {
+      if (!cfg || !cfg.enabled || !cfg.text) return;
+      const text = cfg.text;
+      const color = cfg.color || "#ffffff";
+      const fontSize = Math.max(18, Math.round(Math.min(width, height) * 0.045));
+      ctx.save();
+      ctx.font = `600 ${fontSize}px "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif`;
+      ctx.fillStyle = color;
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,0.35)";
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetY = 1;
+
+      if (cfg.position === "fill") {
+        const tileFont = Math.max(14, Math.round(fontSize * 0.75));
+        ctx.font = `600 ${tileFont}px "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif`;
+        ctx.globalAlpha = 0.28;
+        ctx.textAlign = "left";
+        const metrics = ctx.measureText(text);
+        const gapX = Math.max(metrics.width + tileFont * 1.6, tileFont * 4);
+        const gapY = tileFont * 2.8;
+        ctx.translate(width / 2, height / 2);
+        ctx.rotate((-28 * Math.PI) / 180);
+        // 对角线旋转后需要更大范围才能铺满四角
+        const span = Math.hypot(width, height) * 1.25;
+        for (let y = -span; y <= span; y += gapY) {
+          for (let x = -span; x <= span; x += gapX) {
+            ctx.fillText(text, x, y);
+          }
+        }
+      } else {
+        ctx.globalAlpha = 0.75;
+        const pad = Math.max(12, Math.round(Math.min(width, height) * 0.03));
+        let x = pad;
+        let y = pad + fontSize / 2;
+        ctx.textAlign = "left";
+        if (cfg.position === "tr") {
+          ctx.textAlign = "right";
+          x = width - pad;
+        } else if (cfg.position === "bl") {
+          y = height - pad - fontSize / 2;
+        } else if (cfg.position === "br") {
+          ctx.textAlign = "right";
+          x = width - pad;
+          y = height - pad - fontSize / 2;
+        } else if (cfg.position === "center") {
+          ctx.textAlign = "center";
+          x = width / 2;
+          y = height / 2;
+        }
+        ctx.fillText(text, x, y);
+      }
+      ctx.restore();
+    }
+
+    function applyWatermarkToCanvas(canvas) {
+      if (!canvas) return canvas;
+      const cfg = getWatermarkConfig();
+      if (!cfg.enabled || !cfg.text) return canvas;
+      const ctx = canvas.getContext("2d");
+      drawWatermarkOnCanvas(ctx, canvas.width, canvas.height, cfg);
+      return canvas;
+    }
+
+    // ── 视频录制 ──
+    function syncCaptureRecordMutualExclusive() {
+      const captureBtn = $("btnCapture");
+      const recordBtn = $("btnRecord");
+      const takePhotoBtn = $("btnTakePhoto");
+      const fetchBtn = $("btnFetchImage");
+
+      if (captureBtn) {
+        // 录制中禁止拍摄
+        captureBtn.disabled = !isOpen || isRecording;
+        captureBtn.title = isRecording ? "录制中无法拍摄" : (autoCaptureRunning ? "关闭自动拍摄" : "拍摄");
+      }
+      if (takePhotoBtn) takePhotoBtn.disabled = !isOpen || isRecording;
+      if (fetchBtn) fetchBtn.disabled = !isOpen || isRecording;
+
+      if (recordBtn) {
+        // 自动拍摄进行中禁止开始录制；已在录制则可点「停止录制」
+        recordBtn.disabled = !isOpen || (autoCaptureRunning && !isRecording);
+        recordBtn.textContent = isRecording ? "停止录制" : "录制";
+        recordBtn.classList.toggle("recording", isRecording);
+        recordBtn.title = isRecording
+          ? "停止并保存视频"
+          : (autoCaptureRunning ? "自动拍摄中无法录制" : "录制视频");
+      }
+    }
+
+    function updateRecordButtonLabel() {
+      syncCaptureRecordMutualExclusive();
+    }
+
+    function pickRecorderMime() {
+      const candidates = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
+        "video/mp4"
+      ];
+      if (typeof MediaRecorder === "undefined") return "";
+      for (const mime of candidates) {
+        if (MediaRecorder.isTypeSupported(mime)) return mime;
+      }
+      return "";
+    }
+
+    function getRecordLimitMs() {
+      let min = Number($("inpRecordLimitMin")?.value);
+      if (!Number.isFinite(min)) min = 10;
+      min = Math.max(1, Math.min(90, Math.round(min)));
+      if ($("inpRecordLimitMin")) $("inpRecordLimitMin").value = String(min);
+      return min * 60 * 1000;
+    }
+
+    function clearRecordLimitTimer() {
+      if (recordLimitTimer) {
+        clearTimeout(recordLimitTimer);
+        recordLimitTimer = null;
+      }
+    }
+
+    function armRecordLimitTimer() {
+      clearRecordLimitTimer();
+      const ms = getRecordLimitMs();
+      recordLimitTimer = setTimeout(() => {
+        if (!isRecording) return;
+        recordSegmentRestart = true;
+        toast("已达录制时长上限，自动分段并继续录制");
+        log(`录制时长达上限（${Math.round(ms / 60000)} 分钟），自动分段`, "ok");
+        stopRecording(false);
+      }, ms);
+    }
+
+    function stopRecordDrawLoop() {
+      if (recordRaf) {
+        cancelAnimationFrame(recordRaf);
+        recordRaf = null;
+      }
+    }
+
+    function startRecordDrawLoop() {
+      stopRecordDrawLoop();
+      const grabCanvas = document.createElement("canvas");
+      const grabCtx = grabCanvas.getContext("2d", { alpha: false });
+      const tick = () => {
+        if (!isRecording || !recordCanvas || !recordCtx) return;
+        const w = videoEl.videoWidth;
+        const h = videoEl.videoHeight;
+        if (w && h) {
+          grabCanvas.width = w;
+          grabCanvas.height = h;
+          grabCtx.drawImage(videoEl, 0, 0, w, h);
+          let frame = grabCanvas;
+          if (viewRotation) frame = rotateCanvasCW(grabCanvas, viewRotation);
+          if (recordCanvas.width !== frame.width || recordCanvas.height !== frame.height) {
+            recordCanvas.width = frame.width;
+            recordCanvas.height = frame.height;
+          }
+          recordCtx.drawImage(frame, 0, 0);
+          drawWatermarkOnCanvas(recordCtx, recordCanvas.width, recordCanvas.height, getWatermarkConfig());
+        }
+        recordRaf = requestAnimationFrame(tick);
+      };
+      tick();
+    }
+
+    function toggleRecording() {
+      if (isRecording) {
+        recordUserStopped = true;
+        recordSegmentRestart = false;
+        stopRecording(false);
+      } else {
+        recordUserStopped = false;
+        recordSegmentRestart = false;
+        startRecording();
+      }
+    }
+
+    function startRecording({ silent = false } = {}) {
+      if (!isOpen || !mediaStream) {
+        toast("请先打开摄像头", "err");
+        return;
+      }
+      if (isPaused) {
+        toast("请先恢复预览再录制", "err");
+        return;
+      }
+      if (autoCaptureRunning) {
+        toast("自动拍摄中无法录制，请先关闭自动拍摄", "err");
+        return;
+      }
+      if (typeof MediaRecorder === "undefined") {
+        toast("当前浏览器不支持视频录制", "err");
+        return;
+      }
+      if (isRecording) return;
+
+      try {
+        const frame = grabViewMatchedFrame();
+        if (!frame) throw new Error("无法获取画面");
+
+        recordCanvas = document.createElement("canvas");
+        recordCanvas.width = frame.width;
+        recordCanvas.height = frame.height;
+        recordCtx = recordCanvas.getContext("2d", { alpha: false });
+        recordCtx.drawImage(frame, 0, 0);
+        drawWatermarkOnCanvas(recordCtx, recordCanvas.width, recordCanvas.height, getWatermarkConfig());
+
+        recordStream = recordCanvas.captureStream(30);
+        const mime = pickRecorderMime();
+        const options = mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : { videoBitsPerSecond: 4_000_000 };
+        mediaRecorder = new MediaRecorder(recordStream, options);
+        recordedChunks = [];
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onerror = (e) => {
+          log("录制出错: " + (e.error?.message || e.message || e), "err");
+          toast("录制出错", "err");
+          recordSegmentRestart = false;
+          stopRecording(true);
+        };
+        mediaRecorder.onstop = () => {
+          finalizeRecording().catch((err) => {
+            log("保存录制失败: " + (err.message || err), "err");
+          });
+        };
+
+        isRecording = true;
+        recordStartedAt = Date.now();
+        recordUserStopped = false;
+        startRecordDrawLoop();
+        mediaRecorder.start(200);
+        armRecordLimitTimer();
+        updateRecordButtonLabel();
+        if (!silent) {
+          toast("开始录制");
+          log("开始录制视频", "ok");
+        } else {
+          log("继续录制下一段", "ok");
+        }
+      } catch (e) {
+        clearRecordLimitTimer();
+        cleanupRecordingResources();
+        isRecording = false;
+        recordSegmentRestart = false;
+        updateRecordButtonLabel();
+        log("无法开始录制: " + (e.message || e), "err");
+        toast("无法开始录制", "err");
+      }
+    }
+
+    function stopRecording(discard = false) {
+      if (!isRecording && !mediaRecorder) return;
+      const recorder = mediaRecorder;
+      isRecording = false;
+      clearRecordLimitTimer();
+      stopRecordDrawLoop();
+      updateRecordButtonLabel();
+
+      if (discard) {
+        recordSegmentRestart = false;
+        try {
+          if (recorder && recorder.state !== "inactive") {
+            recorder.onstop = null;
+            recorder.stop();
+          }
+        } catch (_) { /* ignore */ }
+        cleanupRecordingResources();
+        recordedChunks = [];
+        log("录制已取消");
+        return;
+      }
+
+      try {
+        if (recorder && recorder.state !== "inactive") {
+          recorder.stop();
+        } else {
+          finalizeRecording();
+        }
+      } catch (e) {
+        cleanupRecordingResources();
+        recordSegmentRestart = false;
+        log("停止录制失败: " + (e.message || e), "err");
+        toast("停止录制失败", "err");
+      }
+    }
+
+    function cleanupRecordingResources() {
+      stopRecordDrawLoop();
+      clearRecordLimitTimer();
+      if (recordStream) {
+        recordStream.getTracks().forEach((t) => t.stop());
+        recordStream = null;
+      }
+      recordCanvas = null;
+      recordCtx = null;
+      mediaRecorder = null;
+    }
+
+    // ── 本地文件存储（File System Access）──
+    function updateStoragePathDisplay() {
+      const name = storageDirHandle?.name || "";
+      const text = name ? name : "未选择目录";
+      ["storagePathDisplay"].forEach((id) => {
+        const el = $(id);
+        if (!el) return;
+        el.textContent = text;
+        el.title = text;
+        el.classList.toggle("set", !!name);
+      });
+    }
+
+    async function pickStorageDirectory() {
+      if (!window.showDirectoryPicker) {
+        toast("当前浏览器不支持目录选择，请使用 Chrome / Edge", "err");
+        return;
+      }
+      try {
+        const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+        storageDirHandle = handle;
+        updateStoragePathDisplay();
+        toast("已选择存储目录: " + handle.name);
+        log("本地存储目录 → " + handle.name, "ok");
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        log("选择目录失败: " + (e.message || e), "err");
+        toast("选择目录失败", "err");
+      }
+    }
+
+    function clearStorageDirectory() {
+      storageDirHandle = null;
+      updateStoragePathDisplay();
+      toast("已清除存储目录");
+      log("已清除本地存储目录");
+    }
+
+    function triggerBrowserDownload(blob, filenameWithExt) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filenameWithExt;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
+
+    async function saveBlobToStorage(blob, filenameWithExt) {
+      if (!blob) return { ok: false, via: "none" };
+      if (storageDirHandle) {
+        try {
+          const fileHandle = await storageDirHandle.getFileHandle(filenameWithExt, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return { ok: true, via: "dir", path: storageDirHandle.name + "/" + filenameWithExt };
+        } catch (e) {
+          log("写入存储目录失败，回退浏览器下载: " + (e.message || e), "err");
+          toast("写入存储目录失败，已改为浏览器下载", "err");
+        }
+      }
+      triggerBrowserDownload(blob, filenameWithExt);
+      return { ok: true, via: "download" };
+    }
+
+    async function exportShotFile(shot) {
+      if (!shot) return;
+      const isVideo = shot.type === "video";
+      const ext = isVideo ? (shot.ext || "webm") : "jpg";
+      const fullName = `${shot.filename || (isVideo ? "record" : "capture")}.${ext}`;
+      let blob = shot.blob || null;
+      if (!blob && shot.dataUrl) {
+        const res = await fetch(shot.dataUrl);
+        blob = await res.blob();
+      }
+      if (!blob && shot.canvas) {
+        blob = await new Promise((resolve) => shot.canvas.toBlob(resolve, "image/jpeg", 0.92));
+      }
+      if (!blob) {
+        toast("无法导出该文件", "err");
+        return;
+      }
+      const saved = await saveBlobToStorage(blob, fullName);
+      if (saved.via === "dir") toast("已保存到 " + saved.path);
+      else toast("已开始下载 · " + fullName);
+    }
+
+    async function finalizeRecording() {
+      const chunks = recordedChunks.slice();
+      const mime = mediaRecorder?.mimeType || chunks[0]?.type || "video/webm";
+      const shouldRestart = recordSegmentRestart && !recordUserStopped && isOpen && !isPaused;
+      recordSegmentRestart = false;
+      cleanupRecordingResources();
+      recordedChunks = [];
+      isRecording = false;
+      updateRecordButtonLabel();
+
+      if (!chunks.length) {
+        toast("录制内容为空", "err");
+        log("录制结束但无数据", "err");
+        return;
+      }
+
+      const blob = new Blob(chunks, { type: mime });
+      const ext = mime.includes("mp4") ? "mp4" : "webm";
+      const filename = `record_${Date.now()}`;
+      const fullName = `${filename}.${ext}`;
+      const url = URL.createObjectURL(blob);
+
+      shots.unshift({
+        type: "video",
+        blob,
+        dataUrl: url,
+        mime,
+        ext,
+        meta: "record",
+        time: Date.now(),
+        filename,
+        canvas: null
+      });
+      renderGallery();
+
+      const autoSave = $("chkRecordAutoSave") ? !!$("chkRecordAutoSave").checked : false;
+      if (storageDirHandle) {
+        const saved = await saveBlobToStorage(blob, fullName);
+        if (saved.via === "dir") toast("视频已写入相册并保存到 " + saved.path);
+        else toast("视频已写入相册并下载 · " + fullName);
+      } else if (autoSave) {
+        await saveBlobToStorage(blob, fullName);
+        toast("视频已写入相册并下载 · " + fullName);
+      } else {
+        toast("视频已写入相册 · " + fullName);
+      }
+      log(`录制完成 ${fullName} · ${(blob.size / 1024 / 1024).toFixed(2)} MB`, "ok");
+
+      if (shouldRestart) {
+        setTimeout(() => startRecording({ silent: true }), 120);
+      }
+    }
+
+    // ── ZIP 打包（STORE，无额外依赖）──
+    function crc32(buf) {
+      let c = ~0;
+      for (let i = 0; i < buf.length; i++) {
+        c ^= buf[i];
+        for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+      }
+      return ~c >>> 0;
+    }
+
+    function u16(n) {
+      return new Uint8Array([n & 255, (n >>> 8) & 255]);
+    }
+
+    function u32(n) {
+      return new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]);
+    }
+
+    function concatBytes(parts) {
+      const total = parts.reduce((s, p) => s + p.length, 0);
+      const out = new Uint8Array(total);
+      let off = 0;
+      for (const p of parts) {
+        out.set(p, off);
+        off += p.length;
+      }
+      return out;
+    }
+
+    function encodeUtf8(str) {
+      return new TextEncoder().encode(str);
+    }
+
+    function buildZipStore(files) {
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+      const now = new Date();
+      const dosTime = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xffff;
+      const dosDate = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xffff;
+
+      for (const file of files) {
+        const nameBytes = encodeUtf8(file.name);
+        const data = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
+        const crc = crc32(data);
+        const localHeader = concatBytes([
+          u32(0x04034b50),
+          u16(20),
+          u16(0x0800),
+          u16(0),
+          u16(dosTime),
+          u16(dosDate),
+          u32(crc),
+          u32(data.length),
+          u32(data.length),
+          u16(nameBytes.length),
+          u16(0),
+          nameBytes
+        ]);
+        localParts.push(localHeader, data);
+        centralParts.push(concatBytes([
+          u32(0x02014b50),
+          u16(20),
+          u16(20),
+          u16(0x0800),
+          u16(0),
+          u16(dosTime),
+          u16(dosDate),
+          u32(crc),
+          u32(data.length),
+          u32(data.length),
+          u16(nameBytes.length),
+          u16(0),
+          u16(0),
+          u16(0),
+          u16(0),
+          u32(0),
+          u32(offset),
+          nameBytes
+        ]));
+        offset += localHeader.length + data.length;
+      }
+
+      const central = concatBytes(centralParts);
+      const end = concatBytes([
+        u32(0x06054b50),
+        u16(0),
+        u16(0),
+        u16(files.length),
+        u16(files.length),
+        u32(central.length),
+        u32(offset),
+        u16(0)
+      ]);
+      return new Blob([concatBytes(localParts), central, end], { type: "application/zip" });
+    }
+
+    async function shotToZipEntry(shot) {
+      const base = shot.filename || ("file_" + shot.time);
+      if (shot.type === "video") {
+        const ext = shot.ext || "webm";
+        let data;
+        if (shot.blob) data = new Uint8Array(await shot.blob.arrayBuffer());
+        else if (shot.dataUrl) {
+          const res = await fetch(shot.dataUrl);
+          data = new Uint8Array(await res.arrayBuffer());
+        } else return null;
+        return { name: `${base}.${ext}`, data };
+      }
+      let data;
+      if (shot.blob) data = new Uint8Array(await shot.blob.arrayBuffer());
+      else if (shot.dataUrl) {
+        const res = await fetch(shot.dataUrl);
+        data = new Uint8Array(await res.arrayBuffer());
+      } else if (shot.canvas) {
+        const blob = await new Promise((resolve) => shot.canvas.toBlob(resolve, "image/jpeg", 0.92));
+        if (!blob) return null;
+        data = new Uint8Array(await blob.arrayBuffer());
+      } else return null;
+      return { name: `${base}.jpg`, data };
+    }
+
+    async function zipDownloadShots() {
+      if (!shots.length) {
+        toast("相册为空", "err");
+        return;
+      }
+      const btn = $("btnZipShots");
+      if (btn) btn.disabled = true;
+      try {
+        toast("正在打包…");
+        const files = [];
+        const used = new Set();
+        for (const shot of shots) {
+          const entry = await shotToZipEntry(shot);
+          if (!entry) continue;
+          let name = entry.name;
+          if (used.has(name)) {
+            const dot = name.lastIndexOf(".");
+            const stem = dot >= 0 ? name.slice(0, dot) : name;
+            const ext = dot >= 0 ? name.slice(dot) : "";
+            let i = 2;
+            while (used.has(`${stem}_${i}${ext}`)) i++;
+            name = `${stem}_${i}${ext}`;
+          }
+          used.add(name);
+          files.push({ name, data: entry.data });
+        }
+        if (!files.length) {
+          toast("没有可打包的文件", "err");
+          return;
+        }
+        const zipBlob = buildZipStore(files);
+        const zipName = `gallery_${Date.now()}.zip`;
+        const saved = await saveBlobToStorage(zipBlob, zipName);
+        if (saved.via === "dir") {
+          toast(`已打包 ${files.length} 个文件到 ${saved.path}`);
+        } else {
+          toast(`已打包下载 ${files.length} 个文件`);
+        }
+        log(`压缩下载完成 · ${files.length} 个文件 · ${zipName}` + (saved.via === "dir" ? (" → " + saved.path) : ""), "ok");
+      } catch (e) {
+        log("压缩下载失败: " + (e.message || e), "err");
+        toast("压缩下载失败", "err");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     function scheduleDetect() {
       stopDetectLoop();
       if (!isOpen || isPaused || !$("chkLiveHighlight").checked || !cvReady || !scanner) return;
@@ -4292,7 +5243,9 @@
           toast("OpenCV / jscanify 尚未就绪", "err");
           return;
         }
+        if (isRecording) stopRecording(true);
         $("btnOpen").disabled = true;
+        $("btnOpen").textContent = "打开中…";
         if (!isSwitch) {
           $("overlay").querySelector("h2").textContent = "正在打开…";
           $("overlay").querySelector("p").textContent = "请求摄像头权限中";
@@ -4354,10 +5307,11 @@
 
         log(isSwitch ? "已切换摄像头" : "摄像头已打开", "ok");
         toast(isSwitch ? "已切换摄像头" : "摄像头已打开");
+        updateWatermarkPreview();
       } catch (e) {
         console.error(e);
         isOpen = false;
-        $("btnOpen").disabled = false;
+        updateCameraToggleBtn();
         $("overlay").classList.remove("hidden");
         $("overlay").querySelector("h2").textContent = "打开失败";
         $("overlay").querySelector("p").textContent = e.message || String(e);
@@ -4368,6 +5322,7 @@
 
     function closeCamera() {
       try {
+        if (isRecording) stopRecording(true);
         if (isFetching) stopFetching();
         stopAutoCapture();
         stopCodeScan();
@@ -4390,6 +5345,7 @@
         setLive(false);
         viewRotation = 0;
         applyViewTransform();
+        updateWatermarkPreview();
         log("摄像头已关闭");
       } catch (e) {
         log("关闭失败: " + e.message, "err");
@@ -4399,6 +5355,10 @@
     function togglePause() {
       try {
         if (!mediaStream) return;
+        if (isRecording) {
+          toast("录制中无法暂停，请先停止录制", "err");
+          return;
+        }
         if (isPaused) {
           videoEl.play();
           mediaStream.getVideoTracks().forEach((t) => { t.enabled = true; });
@@ -4859,6 +5819,7 @@
       if (!btn) return;
       btn.textContent = autoCaptureRunning ? "关闭自动拍摄" : "拍摄";
       btn.classList.toggle("btn-primary", !autoCaptureRunning);
+      syncCaptureRecordMutualExclusive();
     }
 
     function showAutoCaptureCountdown(sec) {
@@ -4900,6 +5861,10 @@
         toast("请先打开摄像头", "err");
         return;
       }
+      if (isRecording) {
+        toast("录制中无法开启自动拍摄", "err");
+        return;
+      }
       if (!$("chkAutoCapture")?.checked) {
         toast("请先开启「是否自动拍摄」", "err");
         return;
@@ -4934,6 +5899,10 @@
     }
 
     function handleCaptureButtonClick() {
+      if (isRecording) {
+        toast("录制中无法拍摄，请先停止录制", "err");
+        return;
+      }
       if ($("chkAutoCapture")?.checked) {
         if (autoCaptureRunning) {
           stopAutoCapture();
@@ -5055,7 +6024,6 @@
 
     async function addShot(canvas, meta = "") {
       if (!canvas) return false;
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
       const recogMode = getSelectedRecogMode();
       const wantFace = !recogMode && isStageFaceRecogOn();
       const addOnSuccess = !!$("chkRecogAddOnSuccess")?.checked;
@@ -5104,9 +6072,19 @@
         }
       }
 
+      // 识别完成后再写入水印，避免干扰条码 / OCR
+      applyWatermarkToCanvas(canvas);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      let blob = null;
+      try {
+        blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+      } catch (_) { /* ignore */ }
+
       lastFrame = {
         canvas,
         dataUrl,
+        blob,
+        type: "image",
         meta,
         time: Date.now(),
         filename,
@@ -5116,8 +6094,23 @@
       shots.unshift(lastFrame);
       renderGallery();
       $("btnOpenEditor").disabled = false;
-      toast("已拍摄 " + filename);
       log(`拍摄成功 ${canvas.width}×${canvas.height} · ${filename}` + (meta ? " · " + meta : ""), "ok");
+
+      if (storageDirHandle && blob) {
+        try {
+          const saved = await saveBlobToStorage(blob, `${filename}.jpg`);
+          if (saved.via === "dir") {
+            toast("已拍摄并保存到 " + saved.path);
+            log("图片已写入存储目录: " + saved.path, "ok");
+          } else {
+            toast("已拍摄 " + filename);
+          }
+        } catch (_) {
+          toast("已拍摄 " + filename);
+        }
+      } else {
+        toast("已拍摄 " + filename);
+      }
       return true;
     }
 
@@ -5127,7 +6120,7 @@
       const current = shot.filename || "";
       const input = window.prompt(`重命名文件（不含扩展名，最多 ${MAX_FILENAME_LEN} 字符）`, current);
       if (input == null) return;
-      let name = sanitizeFilename(input.replace(/\.(jpe?g|png|gif|webp)$/i, ""));
+      let name = sanitizeFilename(input.replace(/\.(jpe?g|png|gif|webp|webm|mp4)$/i, ""));
       if (!name) {
         toast("文件名不能为空", "err");
         return;
@@ -5149,27 +6142,34 @@
       const gal = $("gallery");
       gal.innerHTML = "";
       if (!shots.length) {
-        gal.innerHTML = '<div class="empty-hint" id="galleryEmpty" style="width:100%;">拍摄的图片将显示在这里</div>';
+        gal.innerHTML = '<div class="empty-hint" id="galleryEmpty" style="width:100%;">拍摄的图片与录制的视频将显示在这里</div>';
         return;
       }
       shots.forEach((s, i) => {
+        const isVideo = s.type === "video";
         const div = document.createElement("div");
-        div.className = "shot";
+        div.className = "shot" + (isVideo ? " shot-video" : "");
         const thumb = document.createElement("div");
         thumb.className = "shot-thumb";
-        const img = document.createElement("img");
-        img.src = s.dataUrl;
-        img.alt = s.filename || ("shot " + i);
+        let media;
+        if (isVideo) {
+          media = document.createElement("video");
+          media.src = s.dataUrl;
+          media.muted = true;
+          media.playsInline = true;
+          media.preload = "metadata";
+        } else {
+          media = document.createElement("img");
+          media.src = s.dataUrl;
+          media.alt = s.filename || ("shot " + i);
+        }
         const actions = document.createElement("div");
         actions.className = "shot-actions";
         const dl = document.createElement("button");
         dl.textContent = "下载";
         dl.onclick = (e) => {
           e.stopPropagation();
-          const a = document.createElement("a");
-          a.href = s.dataUrl;
-          a.download = `${s.filename || "capture"}.jpg`;
-          a.click();
+          exportShotFile(s);
         };
         const rn = document.createElement("button");
         rn.textContent = "重命名";
@@ -5178,26 +6178,33 @@
           renameShot(i);
         };
         const ed = document.createElement("button");
-        ed.textContent = "预览";
+        ed.textContent = isVideo ? "播放" : "预览";
         ed.onclick = (e) => {
           e.stopPropagation();
-          openEditor(s);
+          if (isVideo) openVideoPreview(s);
+          else openEditor(s);
         };
         const rm = document.createElement("button");
         rm.textContent = "删";
         rm.onclick = (e) => {
           e.stopPropagation();
+          if (isVideo && s.dataUrl && String(s.dataUrl).startsWith("blob:")) {
+            try { URL.revokeObjectURL(s.dataUrl); } catch (_) { /* ignore */ }
+          }
           shots.splice(i, 1);
           renderGallery();
         };
         actions.append(dl, rn, ed, rm);
-        thumb.append(img, actions);
+        thumb.append(media, actions);
         const nameEl = document.createElement("div");
         nameEl.className = "shot-name";
         nameEl.title = s.filename || "";
-        nameEl.textContent = s.filename || "未命名";
+        nameEl.textContent = (s.filename || "未命名") + (isVideo ? "." + (s.ext || "webm") : "");
         div.append(thumb, nameEl);
-        div.onclick = () => openEditor(s);
+        div.onclick = () => {
+          if (isVideo) openVideoPreview(s);
+          else openEditor(s);
+        };
         gal.appendChild(div);
       });
     }
@@ -5206,6 +6213,10 @@
       try {
         if (!isOpen) {
           toast("请先打开摄像头", "err");
+          return;
+        }
+        if (isRecording) {
+          toast("录制中无法拍摄，请先停止录制", "err");
           return;
         }
         const frame = grabViewMatchedFrame();
@@ -5271,8 +6282,50 @@
         toast("请先拍摄一张图片", "err");
         return;
       }
+      if (target.type === "video") {
+        openVideoPreview(target);
+        return;
+      }
       openScanImagePreview(target.dataUrl, `拍摄预览 · ${target.filename || ""}`, { shot: target });
       log("已打开预览: " + (target.filename || ""));
+    }
+
+    let videoPreviewShot = null;
+
+    function openVideoPreview(shot) {
+      if (!shot || shot.type !== "video" || !shot.dataUrl) {
+        toast("无法播放该视频", "err");
+        return;
+      }
+      videoPreviewShot = shot;
+      const modal = $("videoPreviewModal");
+      const player = $("videoPreviewPlayer");
+      const title = $("videoPreviewTitle");
+      if (!modal || !player) return;
+      if (title) {
+        title.textContent = `视频预览 · ${shot.filename || ""}${shot.ext ? "." + shot.ext : ""}`;
+      }
+      player.pause();
+      player.src = shot.dataUrl;
+      player.load();
+      modal.classList.add("open");
+      const playPromise = player.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => { /* 自动播放可能被拦截，用户可手动点播放 */ });
+      }
+      log("打开视频预览: " + (shot.filename || ""), "ok");
+    }
+
+    function closeVideoPreview() {
+      const modal = $("videoPreviewModal");
+      const player = $("videoPreviewPlayer");
+      if (player) {
+        player.pause();
+        player.removeAttribute("src");
+        player.load();
+      }
+      videoPreviewShot = null;
+      modal?.classList.remove("open");
     }
 
     function loadImageFromFile(file) {
@@ -6053,9 +7106,12 @@
     }
 
     // ── Event bindings ──
-    $("btnOpen").onclick = () => openCamera(false);
-    $("btnClose").onclick = closeCamera;
+    $("btnOpen").onclick = () => {
+      if (isOpen) closeCamera();
+      else openCamera(false);
+    };
     $("btnPause").onclick = togglePause;
+    $("btnRecord").onclick = () => toggleRecording();
     $("btnScanBarcode").onclick = () => toggleCodeScan("barcode");
     $("btnScanQr").onclick = () => toggleCodeScan("qr");
     $("btnScanRoi").onclick = () => toggleRoiSelect();
@@ -6068,6 +7124,13 @@
       toast("已清空识别结果");
     };
     $("btnCloseScanPreview").onclick = closeScanPreview;
+    $("btnCloseVideoPreview").onclick = closeVideoPreview;
+    $("btnVideoPreviewDownload").onclick = () => {
+      if (videoPreviewShot) exportShotFile(videoPreviewShot);
+    };
+    $("videoPreviewModal")?.addEventListener("click", (e) => {
+      if (e.target === $("videoPreviewModal")) closeVideoPreview();
+    });
     $("btnPreviewMore").onclick = (e) => {
       e.stopPropagation();
       togglePreviewMore();
@@ -6245,11 +7308,21 @@
     $("btnOpenEditor").onclick = () => openEditor();
     $("btnRefreshCameras").onclick = refreshCameras;
     $("btnClearShots").onclick = () => {
+      shots.forEach((s) => {
+        if (s?.type === "video" && s.dataUrl && String(s.dataUrl).startsWith("blob:")) {
+          try { URL.revokeObjectURL(s.dataUrl); } catch (_) { /* ignore */ }
+        }
+      });
       shots = [];
       lastFrame = null;
       renderGallery();
       $("btnOpenEditor").disabled = true;
     };
+    $("btnZipShots").onclick = () => zipDownloadShots();
+    $("btnPickStoragePath").onclick = () => pickStorageDirectory();
+    $("btnClearStoragePath").onclick = () => clearStorageDirectory();
+    $("inpRecordLimitMin").onchange = () => getRecordLimitMs();
+    updateStoragePathDisplay();
     $("btnClearLog").onclick = () => { logBox.innerHTML = ""; };
 
     $("selResolution").onchange = async () => {
@@ -6276,6 +7349,7 @@
     $("selVideoFit").onchange = () => {
       applyVideoFit();
       applyScanMask();
+      updateWatermarkPreview();
       log("Video Fit → " + $("selVideoFit").value);
     };
 
@@ -6289,6 +7363,13 @@
       applyZoom();
       log("缩放已重置", "ok");
     };
+
+    $("chkWatermark").onchange = updateWatermarkFieldsVisibility;
+    $("inpWatermarkText").oninput = updateWatermarkPreview;
+    $("selWatermarkPos").onchange = updateWatermarkPreview;
+    $("inpWatermarkColor").oninput = updateWatermarkPreview;
+    updateWatermarkFieldsVisibility();
+    updateRecordButtonLabel();
 
     $("chkLiveHighlight").onchange = () => {
       if ($("chkLiveHighlight").checked) scheduleDetect();
@@ -6390,6 +7471,8 @@
 
     window.addEventListener("resize", () => {
       if (scanMode) applyScanOverlay(scanMode);
+      applyViewTransform();
+      updateWatermarkPreview();
     });
 
     (function bindRoiSelectEvents() {
