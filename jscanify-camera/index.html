@@ -199,6 +199,58 @@
 
     .pill.live { color: var(--accent); border-color: rgba(30, 200, 165, 0.35); }
 
+    .pill.paused {
+      color: var(--warn);
+      border-color: rgba(232, 168, 56, 0.4);
+    }
+
+    .pill.paused .dot {
+      background: var(--warn);
+      box-shadow: 0 0 8px rgba(232, 168, 56, 0.55);
+      animation: none;
+    }
+
+    .status-action {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      margin-left: 2px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s, opacity 0.15s;
+    }
+
+    .status-action:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .status-action:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .status-action svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
+
+    .status-action .icon-pause,
+    .status-action .icon-play {
+      display: none;
+    }
+
+    #statusPill.can-pause .status-action { display: inline-flex; }
+    #statusPill.can-pause:not(.paused) .status-action .icon-pause { display: block; }
+    #statusPill.can-pause.paused .status-action .icon-play { display: block; }
+
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.35; }
@@ -479,6 +531,47 @@
     }
 
     .roi-box.on { display: block; }
+
+    .crop-capture-layer {
+      z-index: 5;
+      background: rgba(6, 8, 9, 0.32);
+    }
+
+    .crop-capture-layer .roi-box {
+      border-color: var(--warn);
+      background: rgba(232, 168, 56, 0.14);
+      box-shadow: 0 0 0 1px rgba(232, 168, 56, 0.4), 0 0 24px rgba(232, 168, 56, 0.18);
+    }
+
+    .capture-crop-opt {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: var(--bg-elevated);
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .capture-crop-opt:has(input:checked) {
+      color: var(--warn);
+      border-color: rgba(232, 168, 56, 0.45);
+      background: rgba(232, 168, 56, 0.1);
+    }
+
+    .capture-crop-opt input {
+      accent-color: var(--warn);
+    }
+
+    .capture-crop-opt:has(input:disabled) {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
 
     .scan-results-body {
       flex: 1;
@@ -1996,7 +2089,22 @@
         </div>
       </div>
       <div class="header-meta">
-        <span class="pill" id="statusPill"><span class="dot"></span><span id="statusText">未启动</span></span>
+        <span class="pill" id="statusPill">
+          <span class="dot"></span>
+          <span id="statusText">未启动</span>
+          <button type="button" class="status-action" id="btnStatusPause" disabled title="暂停预览" aria-label="暂停预览">
+            <!-- 预览中：关闭/暂停 -->
+            <svg class="icon-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M15 9 9 15" />
+              <path d="M9 9l6 6" />
+            </svg>
+            <!-- 已暂停：开始/恢复 -->
+            <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M8.5 6.8v10.4c0 .7.76 1.12 1.35.72l8.1-5.2a.86.86 0 0 0 0-1.44l-8.1-5.2A.86.86 0 0 0 8.5 6.8z" />
+            </svg>
+          </button>
+        </span>
         <span class="pill" id="resPill">— × —</span>
         <span class="pill" id="fpsPill">FPS —</span>
         <span class="pill" id="verPill">jscanify —</span>
@@ -2020,6 +2128,10 @@
               <div class="roi-hint" id="roiSelectHint">按住鼠标拖动框选识别区域</div>
               <div class="roi-box" id="roiSelectBox"></div>
             </div>
+            <div class="roi-layer crop-capture-layer" id="cropCaptureLayer">
+              <div class="roi-hint" id="cropCaptureHint">按住鼠标拖动框选拍摄区域</div>
+              <div class="roi-box" id="cropCaptureBox"></div>
+            </div>
             <div class="auto-capture-countdown" id="autoCaptureCountdown" hidden>
               <span class="ac-num" id="autoCaptureCountdownVal">5</span>
               <span class="ac-label">秒后自动拍摄</span>
@@ -2042,8 +2154,11 @@
           </div>
           <div class="primary-actions">
             <button class="btn btn-primary" id="btnOpen">打开摄像头</button>
-            <button class="btn" id="btnPause" disabled>暂停</button>
             <button class="btn btn-primary" id="btnCapture" disabled>拍摄</button>
+            <label class="capture-crop-opt" title="勾选后在画面中框选区域拍摄，识别条码/二维码仍走原拍摄逻辑">
+              <input type="checkbox" id="chkCropCapture" disabled />
+              框选拍摄
+            </label>
             <button class="btn btn-record" id="btnRecord" disabled title="录制视频到本地">录制</button>
             <button class="btn" id="btnRotate" disabled title="顺时针旋转 90°">旋转</button>
             <button class="btn btn-torch" id="btnTorch" disabled title="打开手电筒" aria-pressed="false">
@@ -2705,6 +2820,12 @@
     let roiStart = null; // {x,y} stage-local
     let roiBusy = false;
 
+    // ── 框选拍摄 ──
+    let cropCaptureOn = false;
+    let cropCaptureDragging = false;
+    let cropCaptureStart = null;
+    let cropCaptureBusy = false;
+
     // ── 录制 ──
     let isRecording = false;
     let mediaRecorder = null;
@@ -2791,12 +2912,32 @@
     function setLive(on) {
       const pill = $("statusPill");
       const text = $("statusText");
+      const action = $("btnStatusPause");
+      if (!pill || !text) return;
+
+      pill.classList.toggle("live", !!on && !isPaused);
+      pill.classList.toggle("paused", !!on && !!isPaused);
+      pill.classList.toggle("can-pause", !!on);
+
       if (on) {
-        pill.classList.add("live");
         text.textContent = isPaused ? "已暂停" : "预览中";
+        if (action) {
+          action.disabled = false;
+          if (isPaused) {
+            action.title = "恢复预览";
+            action.setAttribute("aria-label", "恢复预览");
+          } else {
+            action.title = "暂停预览";
+            action.setAttribute("aria-label", "暂停预览");
+          }
+        }
       } else {
-        pill.classList.remove("live");
         text.textContent = "未启动";
+        if (action) {
+          action.disabled = true;
+          action.title = "暂停预览";
+          action.setAttribute("aria-label", "暂停预览");
+        }
       }
     }
 
@@ -2818,9 +2959,9 @@
 
     function setCameraControlsEnabled(on) {
       [
-        "btnPause", "btnCapture", "btnRecord", "btnRotate", "btnTorch", "btnScanRoi",
+        "btnCapture", "btnRecord", "btnRotate", "btnTorch", "btnScanRoi",
         "btnFetchImage", "btnTakePhoto", "btnStartFetch", "btnStopFetch",
-        "btnOpenEditor", "rngZoom", "btnResetZoom"
+        "btnOpenEditor", "rngZoom", "btnResetZoom", "chkCropCapture"
       ].forEach((id) => {
         const el = $(id);
         if (el) el.disabled = !on;
@@ -2831,13 +2972,17 @@
         stopAutoCapture();
         stopCodeScan();
         stopRoiSelect();
+        stopCropCaptureMode(true);
         setTorchUi(false);
+      } else {
+        syncCropCaptureLayer();
       }
       updateCaptureButtonLabel();
       updateRecordButtonLabel();
       updateScanActionButtons();
       updateOcrActionButtons();
       updateFaceActionButtons();
+      setLive(!!on && isOpen);
     }
 
     /** 仅移动端需要手电筒按钮（桌面 / 高拍仪 Web 端不展示） */
@@ -3090,6 +3235,8 @@
 
         if (getZXing()?.BrowserMultiFormatReader) {
           log("@zxing/library 已加载，支持条形码 / 二维码识别", "ok");
+          // 预热解码路径，缓解「首次扫二维码失败、先扫条码后再扫就成功」
+          warmupCodeReaders();
         } else {
           log("@zxing/library 未检测到，扫码功能不可用", "err");
         }
@@ -3442,6 +3589,10 @@
         toast("已停止框选识别");
         return;
       }
+      if (isCropCaptureEnabled()) {
+        toast("请先关闭框选拍摄", "err");
+        return;
+      }
       stopCodeScan();
       roiSelectOn = true;
       clearRoiBox();
@@ -3708,6 +3859,155 @@
       roiStart = null;
       setRoiBoxFromPoints(start.x, start.y, end.x, end.y);
       await recognizeRoiSelection(start, end);
+    }
+
+    // ── 框选拍摄（拍摄按钮的另一种取图方式）──
+    function isCropCaptureEnabled() {
+      return !!$("chkCropCapture")?.checked;
+    }
+
+    function clearCropCaptureBox() {
+      const box = $("cropCaptureBox");
+      if (!box) return;
+      box.classList.remove("on");
+      box.style.cssText = "";
+    }
+
+    function setCropCaptureBoxFromPoints(x1, y1, x2, y2) {
+      const box = $("cropCaptureBox");
+      if (!box) return;
+      const left = Math.min(x1, x2);
+      const top = Math.min(y1, y2);
+      const width = Math.abs(x2 - x1);
+      const height = Math.abs(y2 - y1);
+      box.style.left = left + "px";
+      box.style.top = top + "px";
+      box.style.width = width + "px";
+      box.style.height = height + "px";
+      box.classList.toggle("on", width > 2 && height > 2);
+    }
+
+    function stopCropCaptureMode(uncheck = false) {
+      cropCaptureOn = false;
+      cropCaptureDragging = false;
+      cropCaptureStart = null;
+      cropCaptureBusy = false;
+      const layer = $("cropCaptureLayer");
+      if (layer) layer.classList.remove("on");
+      clearCropCaptureBox();
+      if (uncheck && $("chkCropCapture")) $("chkCropCapture").checked = false;
+      syncCaptureRecordMutualExclusive();
+    }
+
+    function syncCropCaptureLayer() {
+      const want = isOpen && isCropCaptureEnabled() && !isRecording;
+      const layer = $("cropCaptureLayer");
+      if (!layer) return;
+      if (want) {
+        if (roiSelectOn) stopRoiSelect();
+        cropCaptureOn = true;
+        layer.classList.add("on");
+      } else {
+        cropCaptureOn = false;
+        cropCaptureDragging = false;
+        cropCaptureStart = null;
+        layer.classList.remove("on");
+        clearCropCaptureBox();
+      }
+      syncCaptureRecordMutualExclusive();
+    }
+
+    function onCropCaptureToggle() {
+      if (isRecording) {
+        if ($("chkCropCapture")) $("chkCropCapture").checked = false;
+        toast("录制中无法开启框选拍摄", "err");
+        return;
+      }
+      if (isCropCaptureEnabled()) {
+        if (autoCaptureRunning) stopAutoCapture();
+        if ($("chkAutoCapture")?.checked) {
+          $("chkAutoCapture").checked = false;
+          updateAutoCaptureIntervalVisibility();
+        }
+        if (roiSelectOn) stopRoiSelect();
+        if (!isOpen) {
+          $("chkCropCapture").checked = false;
+          toast("请先打开摄像头", "err");
+          return;
+        }
+        syncCropCaptureLayer();
+        toast("框选拍摄已开启，请在画面中拖动框选");
+        log("框选拍摄已开启", "ok");
+      } else {
+        stopCropCaptureMode(false);
+        log("框选拍摄已关闭");
+        toast("框选拍摄已关闭");
+      }
+    }
+
+    async function captureCropSelection(clientStart, clientEnd) {
+      if (cropCaptureBusy || !cropCaptureOn || !isOpen) return;
+      if (isRecording) {
+        toast("录制中无法拍摄", "err");
+        return;
+      }
+      const videoRect = mapClientRectToVideo(
+        clientStart.clientX, clientStart.clientY,
+        clientEnd.clientX, clientEnd.clientY
+      );
+      if (!videoRect) {
+        toast("框选区域过小，请重新框选", "err");
+        clearCropCaptureBox();
+        return;
+      }
+
+      cropCaptureBusy = true;
+      toast("正在框选拍摄…");
+      try {
+        const frame = grabVideoFrame();
+        if (!frame) throw new Error("无法获取画面");
+        let cropped = cropFrameByVideoRect(frame, videoRect);
+        if (!cropped) throw new Error("裁剪失败");
+        if (viewRotation) cropped = rotateCanvasCW(cropped, viewRotation);
+        // 走原拍摄入库逻辑（含条码/二维码等识别与水印）
+        await addShot(cropped, `cropCapture(${cropped.width}×${cropped.height})`);
+        log(`框选拍摄成功 ${cropped.width}×${cropped.height}`, "ok");
+      } catch (e) {
+        log("框选拍摄失败: " + (e.message || e), "err");
+        toast("框选拍摄失败", "err");
+      } finally {
+        cropCaptureBusy = false;
+        setTimeout(() => {
+          if (cropCaptureOn && !cropCaptureDragging) clearCropCaptureBox();
+        }, 400);
+      }
+    }
+
+    function onCropCapturePointerDown(e) {
+      if (!cropCaptureOn || cropCaptureBusy || isRecording) return;
+      e.preventDefault();
+      const p = getStageLocalPoint(e);
+      cropCaptureDragging = true;
+      cropCaptureStart = p;
+      setCropCaptureBoxFromPoints(p.x, p.y, p.x, p.y);
+    }
+
+    function onCropCapturePointerMove(e) {
+      if (!cropCaptureDragging || !cropCaptureStart) return;
+      e.preventDefault();
+      const p = getStageLocalPoint(e);
+      setCropCaptureBoxFromPoints(cropCaptureStart.x, cropCaptureStart.y, p.x, p.y);
+    }
+
+    async function onCropCapturePointerUp(e) {
+      if (!cropCaptureDragging || !cropCaptureStart) return;
+      e.preventDefault();
+      const end = getStageLocalPoint(e);
+      const start = cropCaptureStart;
+      cropCaptureDragging = false;
+      cropCaptureStart = null;
+      setCropCaptureBoxFromPoints(start.x, start.y, end.x, end.y);
+      await captureCropSelection(start, end);
     }
 
     function scheduleScanPoll() {
@@ -4526,14 +4826,20 @@
       const recordBtn = $("btnRecord");
       const takePhotoBtn = $("btnTakePhoto");
       const fetchBtn = $("btnFetchImage");
+      const cropChk = $("chkCropCapture");
 
       if (captureBtn) {
         // 录制中禁止拍摄
         captureBtn.disabled = !isOpen || isRecording;
-        captureBtn.title = isRecording ? "录制中无法拍摄" : (autoCaptureRunning ? "关闭自动拍摄" : "拍摄");
+        captureBtn.title = isRecording
+          ? "录制中无法拍摄"
+          : (isCropCaptureEnabled()
+            ? "框选拍摄已开启，请在画面中拖动框选"
+            : (autoCaptureRunning ? "关闭自动拍摄" : "拍摄"));
       }
       if (takePhotoBtn) takePhotoBtn.disabled = !isOpen || isRecording;
       if (fetchBtn) fetchBtn.disabled = !isOpen || isRecording;
+      if (cropChk) cropChk.disabled = !isOpen || isRecording;
 
       if (recordBtn) {
         // 自动拍摄进行中禁止开始录制；已在录制则可点「停止录制」
@@ -4548,6 +4854,8 @@
 
     function updateRecordButtonLabel() {
       syncCaptureRecordMutualExclusive();
+      // 录制结束后若仍勾选框选拍摄，恢复框选层
+      if (!isRecording && isOpen) syncCropCaptureLayer();
     }
 
     function pickRecorderMime() {
@@ -4648,6 +4956,10 @@
       if (autoCaptureRunning) {
         toast("自动拍摄中无法录制，请先关闭自动拍摄", "err");
         return;
+      }
+      if (isCropCaptureEnabled()) {
+        // 录制优先：暂时关闭框选层，勾选保留，停止录制后可再框选
+        syncCropCaptureLayer();
       }
       if (typeof MediaRecorder === "undefined") {
         toast("当前浏览器不支持视频录制", "err");
@@ -5291,7 +5603,6 @@
         $("overlay").classList.add("hidden");
         setCameraControlsEnabled(true);
         setLive(true);
-        $("btnPause").textContent = "暂停";
         applyVideoFit();
         applyZoom();
         applyScanMask();
@@ -5354,7 +5665,7 @@
 
     function togglePause() {
       try {
-        if (!mediaStream) return;
+        if (!mediaStream || !isOpen) return;
         if (isRecording) {
           toast("录制中无法暂停，请先停止录制", "err");
           return;
@@ -5363,7 +5674,6 @@
           videoEl.play();
           mediaStream.getVideoTracks().forEach((t) => { t.enabled = true; });
           isPaused = false;
-          $("btnPause").textContent = "暂停";
           scheduleDetect();
           if (scanMode) {
             applyScanOverlay(scanMode);
@@ -5384,7 +5694,6 @@
           videoEl.pause();
           mediaStream.getVideoTracks().forEach((t) => { t.enabled = false; });
           isPaused = true;
-          $("btnPause").textContent = "恢复";
           stopDetectLoop();
           stopFacePreviewLoop();
           if (scanPollTimer) {
@@ -5467,34 +5776,57 @@
     /** 直接从 Canvas 像素解码，避免 dataURL 中转损失 */
     function decodeCanvasDirect(canvas, formatNames) {
       const ZX = getZXing();
-      if (!ZX?.HTMLCanvasElementLuminanceSource || !ZX?.HybridBinarizer || !ZX?.BinaryBitmap) {
+      if (!ZX?.HTMLCanvasElementLuminanceSource || !ZX?.BinaryBitmap) {
         return undefined;
       }
-      const tryDecode = (luminanceSource) => {
-        const binaryBitmap = new ZX.BinaryBitmap(new ZX.HybridBinarizer(luminanceSource));
-        const hints = createZXingHints(formatNames);
-        // 仅二维码时优先用专用 QRCodeReader，成功率更高
-        const onlyQr = formatNames?.length === 1 && formatNames[0] === "QR_CODE";
+      const onlyQr = formatNames?.length === 1 && formatNames[0] === "QR_CODE";
+      const hints = createZXingHints(formatNames);
+      const binarizers = [ZX.HybridBinarizer, ZX.GlobalHistogramBinarizer].filter(Boolean);
+
+      const tryDecodeBitmap = (binaryBitmap) => {
+        // 仅二维码时优先专用 QRCodeReader（成功率更高）
         if (onlyQr && ZX.QRCodeReader) {
           try {
-            return parseZXingResult(new ZX.QRCodeReader().decode(binaryBitmap, hints));
+            const hit = parseZXingResult(new ZX.QRCodeReader().decode(binaryBitmap, hints));
+            if (hit?.text) return hit;
           } catch {
             /* fall through */
           }
         }
         if (ZX.MultiFormatReader) {
-          const reader = new ZX.MultiFormatReader();
-          reader.setHints(hints);
-          return parseZXingResult(reader.decode(binaryBitmap));
+          try {
+            const reader = new ZX.MultiFormatReader();
+            reader.setHints(hints);
+            // decodeWithState 在部分版本更稳定；无则回退 decode
+            const raw = typeof reader.decodeWithState === "function"
+              ? reader.decodeWithState(binaryBitmap)
+              : reader.decode(binaryBitmap);
+            try { reader.reset?.(); } catch { /* ignore */ }
+            return parseZXingResult(raw);
+          } catch {
+            return undefined;
+          }
         }
         return undefined;
       };
+
       try {
-        const luminance = new ZX.HTMLCanvasElementLuminanceSource(canvas);
-        const hit = tryDecode(luminance);
-        if (hit?.text) return hit;
-        if (typeof luminance.invert === "function") {
-          return tryDecode(luminance.invert());
+        // 每次新建 luminance，避免 invert 与多次 binarize 互相污染
+        const base = new ZX.HTMLCanvasElementLuminanceSource(canvas);
+        const sources = [base];
+        if (typeof base.invert === "function") {
+          try { sources.push(base.invert()); } catch { /* ignore */ }
+        }
+        for (const src of sources) {
+          for (const Binarizer of binarizers) {
+            try {
+              const bitmap = new ZX.BinaryBitmap(new Binarizer(src));
+              const hit = tryDecodeBitmap(bitmap);
+              if (hit?.text) return hit;
+            } catch {
+              /* try next */
+            }
+          }
         }
       } catch {
         return undefined;
@@ -5513,6 +5845,42 @@
       for (let i = 0; i < d.length; i += 4) {
         const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
         d[i] = d[i + 1] = d[i + 2] = g;
+      }
+      ctx.putImageData(img, 0, 0);
+      return out;
+    }
+
+    /** 缩小大图：二维码在过高质量噪点全帧上反而更易失败 */
+    function downscaleCanvas(src, maxSide = 1000) {
+      if (!src) return null;
+      const side = Math.max(src.width, src.height);
+      if (side <= maxSide) return src;
+      const scale = maxSide / side;
+      const out = document.createElement("canvas");
+      out.width = Math.max(1, Math.round(src.width * scale));
+      out.height = Math.max(1, Math.round(src.height * scale));
+      const ctx = out.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(src, 0, 0, out.width, out.height);
+      return out;
+    }
+
+    /** 提升对比度，改善低对比 / 反光二维码 */
+    function enhanceContrastCanvas(src, factor = 1.35) {
+      if (!src) return null;
+      const out = document.createElement("canvas");
+      out.width = src.width;
+      out.height = src.height;
+      const ctx = out.getContext("2d");
+      ctx.drawImage(src, 0, 0);
+      const img = ctx.getImageData(0, 0, out.width, out.height);
+      const d = img.data;
+      const mid = 128;
+      for (let i = 0; i < d.length; i += 4) {
+        d[i] = Math.max(0, Math.min(255, mid + (d[i] - mid) * factor));
+        d[i + 1] = Math.max(0, Math.min(255, mid + (d[i + 1] - mid) * factor));
+        d[i + 2] = Math.max(0, Math.min(255, mid + (d[i + 2] - mid) * factor));
       }
       ctx.putImageData(img, 0, 0);
       return out;
@@ -5555,30 +5923,81 @@
       }
     }
 
-    async function recognizeFromCanvas(canvas, formatNames) {
-      if (!canvas) return undefined;
-      const preferQr = formatNames?.length === 1 && formatNames[0] === "QR_CODE";
-      const variants = [canvas, toGrayscaleCanvas(canvas)];
+    function buildRecognizeVariants(canvas, preferQr) {
+      const variants = [];
+      const push = (c) => {
+        if (!c || !c.width || !c.height) return;
+        // 去重相近尺寸，避免重复解码
+        if (variants.some((v) => v.width === c.width && v.height === c.height && v === c)) return;
+        variants.push(c);
+      };
+
+      push(canvas);
+      push(toGrayscaleCanvas(canvas));
+
+      if (preferQr) {
+        // 二维码：优先缩小到合适分辨率（全帧高清反而更易失败）
+        const d1 = downscaleCanvas(canvas, 1000);
+        if (d1 && d1 !== canvas) {
+          push(d1);
+          push(toGrayscaleCanvas(d1));
+          push(enhanceContrastCanvas(d1));
+          push(enhanceContrastCanvas(toGrayscaleCanvas(d1)));
+        }
+        const d2 = downscaleCanvas(canvas, 720);
+        if (d2 && d2 !== canvas && d2 !== d1) {
+          push(d2);
+          push(toGrayscaleCanvas(d2));
+          push(enhanceContrastCanvas(d2));
+        }
+        push(enhanceContrastCanvas(canvas));
+        push(invertCanvas(canvas));
+        const invGray = invertCanvas(toGrayscaleCanvas(canvas));
+        if (invGray) push(invGray);
+      }
+
       const shortSide = Math.min(canvas.width, canvas.height);
       if (shortSide < 520) {
         const up = upscaleCanvas(canvas, 520);
-        if (up && up !== canvas) variants.push(up, toGrayscaleCanvas(up));
+        if (up && up !== canvas) {
+          push(up);
+          push(toGrayscaleCanvas(up));
+          if (preferQr) push(enhanceContrastCanvas(up));
+        }
       }
-      if (shortSide < 900) {
+      if (shortSide < 900 && !preferQr) {
         const up2 = upscaleCanvas(canvas, 900);
-        if (up2 && up2 !== canvas) variants.push(up2, toGrayscaleCanvas(up2));
+        if (up2 && up2 !== canvas) {
+          push(up2);
+          push(toGrayscaleCanvas(up2));
+        }
       }
+      return variants;
+    }
+
+    async function recognizeFromCanvas(canvas, formatNames) {
+      if (!canvas) return undefined;
+      const preferQr = formatNames?.length === 1 && formatNames[0] === "QR_CODE";
+      const variants = buildRecognizeVariants(canvas, preferQr);
 
       for (const variant of variants) {
-        // 0) 浏览器原生 BarcodeDetector（按类型严格过滤）
-        const nativeHit = await recognizeWithBarcodeDetector(variant, preferQr);
-        if (resultMatchesRequestedType(nativeHit, preferQr)) return nativeHit;
+        // 二维码：先走 ZXing 像素解码（更稳），再走原生 BarcodeDetector
+        // 条形码：保留原生优先（通常更快）
+        if (preferQr) {
+          const direct = decodeCanvasDirect(variant, formatNames);
+          if (resultMatchesRequestedType(direct, preferQr)) return direct;
 
-        // 1) 直接像素解码
-        const direct = decodeCanvasDirect(variant, formatNames);
-        if (resultMatchesRequestedType(direct, preferQr)) return direct;
+          const nativeHit = await recognizeWithBarcodeDetector(variant, preferQr);
+          if (resultMatchesRequestedType(nativeHit, preferQr)) return nativeHit;
+        } else {
+          const nativeHit = await recognizeWithBarcodeDetector(variant, preferQr);
+          if (resultMatchesRequestedType(nativeHit, preferQr)) return nativeHit;
 
-        // 2) BrowserMultiFormatReader.decodeFromCanvas
+          const direct = decodeCanvasDirect(variant, formatNames);
+          if (resultMatchesRequestedType(direct, preferQr)) return direct;
+        }
+
+        // BrowserMultiFormatReader.decodeFromCanvas
         try {
           const reader = createZXingReader(formatNames);
           if (typeof reader.decodeFromCanvas === "function") {
@@ -5590,7 +6009,7 @@
           /* continue */
         }
 
-        // 3) ImageElement 回退
+        // ImageElement 回退
         try {
           const reader = createZXingReader(formatNames);
           const imageDataUrl = variant.toDataURL("image/png");
@@ -5608,6 +6027,36 @@
         }
       }
       return undefined;
+    }
+
+    /** 预热解码器，避免首次扫二维码冷启动失败（先扫条码再扫二维码就容易成功的现象） */
+    function warmupCodeReaders() {
+      try {
+        const ZX = getZXing();
+        if (!ZX) return;
+        const c = document.createElement("canvas");
+        c.width = 96;
+        c.height = 96;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, 96, 96);
+        ctx.fillStyle = "#000";
+        for (let i = 0; i < 8; i++) {
+          ctx.fillRect(8 + i * 10, 8, 6, 6);
+          ctx.fillRect(8, 8 + i * 10, 6, 6);
+        }
+        // 触发类加载 / JIT；预期 NotFound，忽略结果
+        decodeCanvasDirect(c, QR_FORMATS);
+        decodeCanvasDirect(c, BARCODE_FORMATS);
+        createZXingReader(QR_FORMATS);
+        createZXingReader(BARCODE_FORMATS);
+        if (typeof window.BarcodeDetector === "function") {
+          recognizeWithBarcodeDetector(c, true).catch(() => {});
+          recognizeWithBarcodeDetector(c, false).catch(() => {});
+        }
+      } catch {
+        /* ignore warmup errors */
+      }
     }
 
     const MAX_FILENAME_LEN = 400;
@@ -5865,6 +6314,10 @@
         toast("录制中无法开启自动拍摄", "err");
         return;
       }
+      if (isCropCaptureEnabled()) {
+        toast("框选拍摄开启时无法使用自动拍摄", "err");
+        return;
+      }
       if (!$("chkAutoCapture")?.checked) {
         toast("请先开启「是否自动拍摄」", "err");
         return;
@@ -5901,6 +6354,15 @@
     function handleCaptureButtonClick() {
       if (isRecording) {
         toast("录制中无法拍摄，请先停止录制", "err");
+        return;
+      }
+      if (isCropCaptureEnabled()) {
+        if (!isOpen) {
+          toast("请先打开摄像头", "err");
+          return;
+        }
+        syncCropCaptureLayer();
+        toast("请在画面中拖动框选拍摄区域");
         return;
       }
       if ($("chkAutoCapture")?.checked) {
@@ -7110,7 +7572,10 @@
       if (isOpen) closeCamera();
       else openCamera(false);
     };
-    $("btnPause").onclick = togglePause;
+    $("btnStatusPause").onclick = (e) => {
+      e.stopPropagation();
+      togglePause();
+    };
     $("btnRecord").onclick = () => toggleRecording();
     $("btnScanBarcode").onclick = () => toggleCodeScan("barcode");
     $("btnScanQr").onclick = () => toggleCodeScan("qr");
@@ -7493,6 +7958,27 @@
         clearRoiBox();
       });
     })();
+
+    (function bindCropCaptureEvents() {
+      const layer = $("cropCaptureLayer");
+      if (!layer) return;
+      layer.addEventListener("mousedown", onCropCapturePointerDown);
+      layer.addEventListener("mousemove", onCropCapturePointerMove);
+      layer.addEventListener("mouseup", onCropCapturePointerUp);
+      layer.addEventListener("mouseleave", (e) => {
+        if (cropCaptureDragging) onCropCapturePointerUp(e);
+      });
+      layer.addEventListener("touchstart", onCropCapturePointerDown, { passive: false });
+      layer.addEventListener("touchmove", onCropCapturePointerMove, { passive: false });
+      layer.addEventListener("touchend", onCropCapturePointerUp, { passive: false });
+      layer.addEventListener("touchcancel", () => {
+        cropCaptureDragging = false;
+        cropCaptureStart = null;
+        clearCropCaptureBox();
+      });
+    })();
+
+    $("chkCropCapture").onchange = () => onCropCaptureToggle();
 
     $("btnRetrySdk").onclick = () => initSDK();
     window.addEventListener("load", initSDK);
