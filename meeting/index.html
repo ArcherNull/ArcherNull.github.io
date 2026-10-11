@@ -332,14 +332,9 @@
       position: relative;
       min-height: 0;
       padding: 12px 16px 8px;
-      display: grid;
-      gap: 10px;
-      align-content: start;
-      overflow: auto;
+      display: block;
+      overflow: hidden;
     }
-    .stage.solo { place-items: stretch; }
-    .stage.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .stage.grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 
     .tile {
       position: relative;
@@ -348,14 +343,44 @@
       background: #0b0b1c;
       border: 1px solid rgba(92, 92, 255, 0.18);
       box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-      min-height: 220px;
-      aspect-ratio: 16 / 10;
     }
-    .stage.solo .tile {
-      min-height: min(64vh, 660px);
-      aspect-ratio: auto;
+    .tile-main {
+      width: 100%;
       height: 100%;
+      min-height: min(64vh, 660px);
       border-radius: 14px;
+    }
+    /* 参会者画中画：叠在主画面右上角 */
+    .pip-stack {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 6;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-end;
+      max-height: calc(100% - 40px);
+      overflow: auto;
+      pointer-events: none;
+    }
+    .tile-pip {
+      width: min(30vw, 260px);
+      aspect-ratio: 16 / 10;
+      min-height: 0;
+      border-radius: 10px;
+      border: 2px solid rgba(160, 160, 255, 0.45);
+      box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(0, 0, 135, 0.35),
+        0 0 24px rgba(0, 0, 135, 0.25);
+      pointer-events: auto;
+      flex-shrink: 0;
+      animation: pipIn .28s ease-out;
+    }
+    @keyframes pipIn {
+      from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+      to { opacity: 1; transform: none; }
     }
     .tile video, .tile .video-host {
       width: 100%; height: 100%; object-fit: cover; background: #000;
@@ -365,6 +390,15 @@
     .tile .video-host > div, .tile .video-host video {
       width: 100% !important; height: 100% !important; object-fit: cover;
     }
+    .tile-pip .tile-badge {
+      left: 8px; bottom: 8px;
+      padding: 4px 8px;
+      font-size: .7rem;
+    }
+    .tile-pip .avatar {
+      width: 48px; height: 48px; font-size: 1.1rem; margin-bottom: 6px;
+    }
+    .tile-pip .tile-empty { font-size: .72rem; }
     .tile-badge {
       position: absolute; left: 10px; bottom: 10px;
       display: flex; align-items: center; gap: 8px;
@@ -536,9 +570,9 @@
     @media (max-width: 720px) {
       .card { padding: 26px 20px; border-radius: 16px; }
       .row-2 { grid-template-columns: 1fr; }
-      .stage.grid-2, .stage.grid-3 { grid-template-columns: 1fr; }
-      .tile { min-height: 200px; border-radius: 10px; }
-      .stage.solo .tile { min-height: 48vh; }
+      .tile-main { min-height: 48vh; border-radius: 10px; }
+      .pip-stack { top: 12px; right: 12px; gap: 8px; }
+      .tile-pip { width: min(42vw, 160px); border-radius: 8px; }
       .tool { width: 48px; height: 48px; }
       .toolbar { gap: 10px; }
       body::after { opacity: 0.28; }
@@ -629,8 +663,8 @@
         </div>
       </header>
 
-      <main class="stage solo" id="stage">
-        <div class="tile" id="local-tile">
+      <main class="stage" id="stage">
+        <div class="tile tile-main" id="local-tile">
           <div class="video-host" id="local-video"></div>
           <div class="tile-empty hidden" id="local-empty">
             <div>
@@ -643,6 +677,7 @@
             <span id="local-name-badge">我</span>
           </div>
         </div>
+        <div class="pip-stack" id="pip-stack" aria-live="polite"></div>
       </main>
 
       <footer class="toolbar">
@@ -945,28 +980,48 @@
     }
 
     function syncStageLayout() {
-      const stage = $('stage');
-      const count = 1 + state.remoteUsers.size;
-      stage.classList.remove('solo', 'grid-2', 'grid-3');
-      if (count <= 1) stage.classList.add('solo');
-      else if (count === 2) stage.classList.add('grid-2');
-      else stage.classList.add('grid-3');
+      $('stage').classList.toggle('has-remote', state.remoteUsers.size > 0);
+    }
+
+    function remoteDisplayName(userId) {
+      const raw = String(userId || '');
+      if (raw.startsWith('host_')) return '房主';
+      if (raw.startsWith('guest_')) return `参会者 ${raw.slice(6)}`;
+      return raw || '参会者';
     }
 
     function ensureRemoteTile(userId, label) {
       const id = `remote-tile-${userId}`;
       let tile = document.getElementById(id);
-      if (tile) return tile;
+      if (tile) {
+        const nameEl = tile.querySelector('[data-remote-name]');
+        if (nameEl && label) nameEl.textContent = label;
+        return tile;
+      }
+      const name = label || remoteDisplayName(userId);
+      const initial = String(name).slice(0, 1).toUpperCase() || 'P';
       tile = document.createElement('div');
-      tile.className = 'tile';
+      tile.className = 'tile tile-pip';
       tile.id = id;
       tile.innerHTML = `
         <div class="video-host" id="remote-video-${userId}"></div>
-        <div class="tile-badge"><span class="dot"></span><span>${label || userId}</span></div>
+        <div class="tile-empty" id="remote-empty-${userId}">
+          <div>
+            <div class="avatar">${initial}</div>
+            <div style="text-align:center">等待视频</div>
+          </div>
+        </div>
+        <div class="tile-badge"><span class="dot"></span><span data-remote-name>${name}</span></div>
       `;
-      $('stage').appendChild(tile);
+      $('pip-stack').appendChild(tile);
+      state.remoteUsers.set(userId, state.remoteUsers.get(userId) || null);
       syncStageLayout();
       return tile;
+    }
+
+    function setRemoteVideoVisible(userId, visible) {
+      const empty = document.getElementById(`remote-empty-${userId}`);
+      if (empty) empty.classList.toggle('hidden', visible);
     }
 
     function removeRemoteTile(userId) {
@@ -1134,29 +1189,36 @@
       state.trtc = trtc;
 
       trtc.on(TRTC.EVENT.REMOTE_USER_ENTER, (event) => {
-        toast(`${event.userId} 已加入`);
+        ensureRemoteTile(event.userId, remoteDisplayName(event.userId));
+        setRemoteVideoVisible(event.userId, false);
+        toast(`${remoteDisplayName(event.userId)} 已加入`);
       });
       trtc.on(TRTC.EVENT.REMOTE_USER_EXIT, (event) => {
         removeRemoteTile(event.userId);
-        toast(`${event.userId} 已离开`);
+        toast(`${remoteDisplayName(event.userId)} 已离开`);
       });
       trtc.on(TRTC.EVENT.REMOTE_VIDEO_AVAILABLE, async (event) => {
         state.remoteUsers.set(event.userId, event.streamType);
-        ensureRemoteTile(event.userId, event.userId);
+        ensureRemoteTile(event.userId, remoteDisplayName(event.userId));
         try {
           const view = await waitForElement(`remote-video-${event.userId}`);
+          view.innerHTML = '';
           await trtc.startRemoteVideo({
             userId: event.userId,
             streamType: event.streamType,
             view
           });
+          setRemoteVideoVisible(event.userId, true);
         } catch (e) {
           console.error(e);
+          toast('拉取远端视频失败，请确认双方 TRTC 配置一致');
+          setRemoteVideoVisible(event.userId, false);
         }
       });
       trtc.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (event) => {
         const host = document.getElementById(`remote-video-${event.userId}`);
         if (host) host.innerHTML = '';
+        setRemoteVideoVisible(event.userId, false);
       });
       trtc.on(TRTC.EVENT.REMOTE_AUDIO_AVAILABLE, (event) => {
         if (!state.speakerOn) {
@@ -1171,6 +1233,15 @@
         userSig,
         scene: TRTC.TYPE.SCENE_RTC
       });
+
+      // 进房后补拉已在房间内的远端用户（避免错过进房前事件）
+      try {
+        const remoteList = trtc.getRemoteUsers?.() || [];
+        remoteList.forEach((u) => {
+          const uid = u.userId || u;
+          ensureRemoteTile(uid, remoteDisplayName(uid));
+        });
+      } catch {}
 
       const localView = await waitForElement('local-video');
       localView.innerHTML = '';
@@ -1259,7 +1330,8 @@
       await destroyTrtc();
       stopLocalStream();
       state.remoteUsers.clear();
-      document.querySelectorAll('[id^="remote-tile-"]').forEach((n) => n.remove());
+      $('pip-stack').innerHTML = '';
+      syncStageLayout();
       state.status = 'idle';
       state.role = null;
       showScreen('landing');
