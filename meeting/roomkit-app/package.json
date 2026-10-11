@@ -1,0 +1,28 @@
+{
+  "name": "roomkit-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --open /meet.html",
+    "build": "vite build && node scripts/publish.mjs",
+    "build:check": "vue-tsc -b && vite build && node scripts/publish.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tencentcloud/roomkit-web-vue3": "^6.2.0",
+    "@tencentcloud/tui-core-lite": "^1.0.1",
+    "@tencentcloud/tuiroom-engine-js": "^4.2.5",
+    "@tencentcloud/uikit-base-component-vue3": "^1.5.0",
+    "@tencentcloud/universal-api": "^2.4.1",
+    "sass": "^1.105.1",
+    "tuikit-atomicx-vue3": "^6.5.12",
+    "vue": "^3.5.12"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "typescript": "~5.6.2",
+    "vite": "^5.4.10",
+    "vue-tsc": "^2.1.8"
+  }
+}

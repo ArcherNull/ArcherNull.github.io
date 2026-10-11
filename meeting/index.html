@@ -486,6 +486,60 @@
       filter: brightness(1.1);
       box-shadow: 0 8px 26px rgba(0, 0, 135, 0.55), 0 0 24px rgba(61, 61, 255, 0.35);
     }
+    .tool.record {
+      background: rgba(28, 28, 48, 0.92);
+      border-color: rgba(255, 255, 255, 0.1);
+      width: auto; min-width: 108px;
+      padding: 0 18px;
+      border-radius: 26px;
+      gap: 8px;
+      display: inline-flex;
+    }
+    .tool.record .rec-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #ff4d55;
+      box-shadow: 0 0 0 3px rgba(255, 77, 85, 0.2);
+      flex-shrink: 0;
+    }
+    .tool.record.is-recording {
+      background: linear-gradient(135deg, #ff5a5f, #c62828);
+      border-color: transparent;
+      box-shadow: 0 8px 22px rgba(198, 40, 40, 0.45);
+      animation: recPulse 1.4s ease-in-out infinite;
+    }
+    .tool.record.is-recording .rec-dot {
+      background: #fff;
+      box-shadow: none;
+      animation: recBlink 1s step-end infinite;
+    }
+    @keyframes recPulse {
+      0%, 100% { box-shadow: 0 8px 22px rgba(198, 40, 40, 0.4); }
+      50% { box-shadow: 0 8px 28px rgba(255, 77, 85, 0.65); }
+    }
+    @keyframes recBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+    .btn-record-top.is-recording {
+      color: #fff;
+      background: linear-gradient(135deg, #ff5a5f, #c62828);
+      border-color: transparent;
+    }
+    .rec-banner {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 8;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px;
+      background: rgba(120, 10, 20, 0.82);
+      border: 1px solid rgba(255, 100, 110, 0.45);
+      color: #fff; font-size: .78rem; font-weight: 600;
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+    .rec-banner .rec-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #ff6b73;
+      animation: recBlink 1s step-end infinite;
+    }
     .tool svg { width: 22px; height: 22px; }
     .tool-label { font-size: .78rem; font-weight: 600; }
 
@@ -660,10 +714,12 @@
         <div class="top-actions">
           <button class="btn btn-ghost btn-sm" id="btn-devices">设备</button>
           <button class="btn btn-ghost btn-sm" id="btn-share" title="分享邀请">邀请</button>
+          <button class="btn btn-ghost btn-sm btn-record-top" id="btn-record-top" title="云端录制">云端录制</button>
         </div>
       </header>
 
       <main class="stage" id="stage">
+        <div class="rec-banner hidden" id="rec-banner"><span class="rec-dot"></span><span id="rec-banner-text">云端录制中 00:00</span></div>
         <div class="tile tile-main" id="local-tile">
           <div class="video-host" id="local-video"></div>
           <div class="tile-empty hidden" id="local-empty">
@@ -696,6 +752,10 @@
         <button class="tool invite" id="btn-invite-bar" title="邀请链接" aria-label="邀请链接">
           <svg viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5.93" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 18.07" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <span class="tool-label">邀请链接</span>
+        </button>
+        <button class="tool record" id="btn-record" title="云端录制" aria-label="云端录制">
+          <span class="rec-dot" aria-hidden="true"></span>
+          <span class="tool-label" id="btn-record-label">云端录制</span>
         </button>
         <button class="tool leave" id="btn-leave" title="离开会议">
           <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v4M10 14 21 3M9 21H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -750,6 +810,15 @@
         <input id="cfg-secret" type="password" placeholder="正式环境请走服务端签发 UserSig" />
         <div class="field-hint">留空则使用本机预览模式（同浏览器多标签可演示等候/邀请流程）</div>
       </div>
+      <div class="field">
+        <label for="cfg-secret-id">云 API SecretId（云端录制）</label>
+        <input id="cfg-secret-id" placeholder="腾讯云控制台 · 访问密钥 SecretId" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="cfg-api-secret">云 API SecretKey（云端录制）</label>
+        <input id="cfg-api-secret" type="password" placeholder="与 SecretId 配对的 SecretKey" autocomplete="off" />
+        <div class="field-hint">配置后「云端录制」将调用腾讯云 CreateCloudRecording，文件写入云点播；未配置时回退为浏览器录制并下载到本地。</div>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-primary" id="btn-refresh-devices">刷新设备</button>
         <button class="btn btn-ghost" id="btn-apply-devices">应用</button>
@@ -767,13 +836,18 @@
      * SecretKey 仅适合本地 Demo，正式环境必须服务端签发 UserSig。
      */
     const TRTC_DEFAULTS = {
-      sdkAppId: 0,
-      secretKey: ''
+      sdkAppId: 1600163950,
+      secretKey: 'd418988f5d7464b114383266cc856d6f7f48c2a38fc9d66d2335a2abd81b10f8',
+      secretId: '',
+      apiSecretKey: ''
     };
     const TRTC_CONFIG = {
       sdkAppId: Number(localStorage.getItem('meet.sdkAppId') || TRTC_DEFAULTS.sdkAppId || 0),
       secretKey: String(localStorage.getItem('meet.secretKey') || TRTC_DEFAULTS.secretKey || ''),
-      expireTime: 604800
+      secretId: String(localStorage.getItem('meet.secretId') || TRTC_DEFAULTS.secretId || ''),
+      apiSecretKey: String(localStorage.getItem('meet.apiSecretKey') || TRTC_DEFAULTS.apiSecretKey || ''),
+      expireTime: 604800,
+      region: 'ap-guangzhou'
     };
 
     const RESOLUTIONS = {
@@ -799,7 +873,16 @@
       localStream: null,
       remoteUsers: new Map(),
       waitTimer: null,
-      channel: null
+      channel: null,
+      recording: false,
+      recordMode: null, // 'cloud' | 'local'
+      recordTaskId: '',
+      recordStartedAt: 0,
+      recordTimer: null,
+      mediaRecorder: null,
+      recordChunks: [],
+      recordRaf: 0,
+      recordAudioCtx: null
     };
 
     const $ = (id) => document.getElementById(id);
@@ -912,6 +995,8 @@
     function openDevicesModal() {
       $('cfg-sdk').value = TRTC_CONFIG.sdkAppId || '';
       $('cfg-secret').value = TRTC_CONFIG.secretKey || '';
+      $('cfg-secret-id').value = TRTC_CONFIG.secretId || '';
+      $('cfg-api-secret').value = TRTC_CONFIG.apiSecretKey || '';
       $('select-resolution').value = state.resolution;
       renderCameraSelect();
       updateDevicePills();
@@ -1152,6 +1237,321 @@
       return base64UrlEscape(bytesToBase64(compressed));
     }
 
+    function cloudRecordEnabled() {
+      return Boolean(TRTC_CONFIG.secretId && TRTC_CONFIG.apiSecretKey && trtcEnabled());
+    }
+
+    function formatRecordDuration(ms) {
+      const sec = Math.max(0, Math.floor(ms / 1000));
+      const m = String(Math.floor(sec / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function setRecordingUi(on, mode) {
+      state.recording = on;
+      ['btn-record', 'btn-record-top'].forEach((id) => {
+        $(id)?.classList.toggle('is-recording', on);
+      });
+      $('btn-record-label').textContent = on ? '停止录制' : '云端录制';
+      $('btn-record-top').textContent = on ? '停止录制' : '云端录制';
+      const banner = $('rec-banner');
+      banner.classList.toggle('hidden', !on);
+      if (on) {
+        const label = mode === 'cloud' ? '云端录制中' : '本地录制中';
+        $('rec-banner-text').textContent = `${label} 00:00`;
+      }
+      clearInterval(state.recordTimer);
+      state.recordTimer = null;
+      if (on) {
+        state.recordStartedAt = Date.now();
+        state.recordTimer = setInterval(() => {
+          const label = state.recordMode === 'cloud' ? '云端录制中' : '本地录制中';
+          $('rec-banner-text').textContent = `${label} ${formatRecordDuration(Date.now() - state.recordStartedAt)}`;
+        }, 500);
+      }
+    }
+
+    async function callTrtcCloudApi(action, payload) {
+      const host = 'trtc.tencentcloudapi.com';
+      const service = 'trtc';
+      const version = '2019-07-22';
+      const region = TRTC_CONFIG.region || 'ap-guangzhou';
+      const timestamp = Math.floor(Date.now() / 1000);
+      const date = new Date(timestamp * 1000).toISOString().slice(0, 10);
+      const body = JSON.stringify(payload);
+      const hashedRequestPayload = sha256(body);
+      const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${host}\n`;
+      const signedHeaders = 'content-type;host';
+      const canonicalRequest = ['POST', '/', '', canonicalHeaders, signedHeaders, hashedRequestPayload].join('\n');
+      const credentialScope = `${date}/${service}/tc3_request`;
+      const stringToSign = ['TC3-HMAC-SHA256', String(timestamp), credentialScope, sha256(canonicalRequest)].join('\n');
+
+      const secretDate = sha256.hmac.array(`TC3${TRTC_CONFIG.apiSecretKey}`, date);
+      const secretService = sha256.hmac.array(secretDate, service);
+      const secretSigning = sha256.hmac.array(secretService, 'tc3_request');
+      const signature = sha256.hmac(secretSigning, stringToSign);
+
+      const authorization = [
+        'TC3-HMAC-SHA256',
+        `Credential=${TRTC_CONFIG.secretId}/${credentialScope},`,
+        `SignedHeaders=${signedHeaders},`,
+        `Signature=${signature}`
+      ].join(' ');
+
+      let res;
+      try {
+        res = await fetch(`https://${host}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'X-TC-Action': action,
+            'X-TC-Timestamp': String(timestamp),
+            'X-TC-Version': version,
+            'X-TC-Region': region,
+            Authorization: authorization
+          },
+          body
+        });
+      } catch {
+        throw new Error('浏览器无法直连腾讯云 API（CORS），已回退本地录制');
+      }
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`云端录制 HTTP ${res.status}`);
+      }
+      if (data.Response?.Error) {
+        const err = data.Response.Error;
+        throw new Error(`${err.Code || 'Error'}: ${err.Message || '云端录制请求失败'}`);
+      }
+      return data.Response || data;
+    }
+
+    async function startCloudRecording() {
+      const roomId = digitsOnly(state.roomId);
+      const recorderId = `recorder_${roomId.slice(-8)}_${Math.floor(Math.random() * 1000)}`;
+      const userSig = genTestUserSig(recorderId);
+      const response = await callTrtcCloudApi('CreateCloudRecording', {
+        SdkAppId: Number(TRTC_CONFIG.sdkAppId),
+        RoomId: roomId,
+        RoomIdType: 0,
+        UserId: recorderId,
+        UserSig: userSig,
+        RecordParams: {
+          RecordMode: 2,
+          StreamType: 0,
+          MaxIdleTime: 60
+        },
+        StorageParams: {
+          CloudVod: {
+            TencentVod: {
+              ExpireTime: 0
+            }
+          }
+        },
+        MixLayoutParams: {
+          MixLayoutMode: 3
+        }
+      });
+      state.recordTaskId = response.TaskId || '';
+      state.recordMode = 'cloud';
+      setRecordingUi(true, 'cloud');
+      toast(state.recordTaskId ? `云端录制已开始（${state.recordTaskId.slice(0, 8)}…）` : '云端录制已开始');
+    }
+
+    async function stopCloudRecording() {
+      if (!state.recordTaskId) return;
+      await callTrtcCloudApi('DeleteCloudRecording', {
+        SdkAppId: Number(TRTC_CONFIG.sdkAppId),
+        TaskId: state.recordTaskId
+      });
+      toast('云端录制已停止，文件将写入云点播');
+      state.recordTaskId = '';
+    }
+
+    function findStageVideos() {
+      const local = $('local-video')?.querySelector('video');
+      const remotes = [...document.querySelectorAll('#pip-stack video')];
+      return { local, remotes };
+    }
+
+    async function startLocalRecording() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const ctx = canvas.getContext('2d');
+      const draw = () => {
+        ctx.fillStyle = '#050512';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const { local, remotes } = findStageVideos();
+        if (local && local.readyState >= 2) {
+          ctx.drawImage(local, 0, 0, canvas.width, canvas.height);
+        } else {
+          ctx.fillStyle = '#8b8bb8';
+          ctx.font = '600 28px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(state.displayName || '会议录制', canvas.width / 2, canvas.height / 2);
+        }
+        remotes.slice(0, 3).forEach((video, i) => {
+          if (video.readyState < 2) return;
+          const w = 280;
+          const h = 158;
+          const x = canvas.width - w - 24;
+          const y = 24 + i * (h + 12);
+          ctx.save();
+          ctx.beginPath();
+          if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, 10);
+          else ctx.rect(x, y, w, h);
+          ctx.clip();
+          ctx.drawImage(video, x, y, w, h);
+          ctx.restore();
+          ctx.strokeStyle = 'rgba(160,160,255,0.7)';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x, y, w, h);
+        });
+        state.recordRaf = requestAnimationFrame(draw);
+      };
+      draw();
+
+      const videoStream = canvas.captureStream(30);
+      const tracks = [...videoStream.getVideoTracks()];
+
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        state.recordAudioCtx = audioCtx;
+        const dest = audioCtx.createMediaStreamDestination();
+        const addAudioFromVideo = (video) => {
+          if (!video?.srcObject) return;
+          video.srcObject.getAudioTracks().forEach(() => {
+            try {
+              const src = audioCtx.createMediaStreamSource(video.srcObject);
+              src.connect(dest);
+            } catch {}
+          });
+        };
+        const { local, remotes } = findStageVideos();
+        // 本地预览 video 通常 muted，从 localStream / 采集麦克风
+        if (state.localStream?.getAudioTracks().length) {
+          const src = audioCtx.createMediaStreamSource(state.localStream);
+          src.connect(dest);
+        } else if (local) {
+          addAudioFromVideo(local);
+        }
+        remotes.forEach(addAudioFromVideo);
+        if (!state.localStream?.getAudioTracks().length && !state.trtc) {
+          try {
+            const mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            mic.getAudioTracks().forEach((t) => {
+              dest.stream.addTrack(t);
+              tracks.push(t);
+            });
+          } catch {}
+        }
+        dest.stream.getAudioTracks().forEach((t) => tracks.push(t));
+      } catch (e) {
+        console.warn('record audio mix failed', e);
+      }
+
+      const mixed = new MediaStream(tracks);
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+        ? 'video/webm;codecs=vp9,opus'
+        : MediaRecorder.isTypeSupported('video/webm')
+          ? 'video/webm'
+          : '';
+      state.recordChunks = [];
+      state.mediaRecorder = new MediaRecorder(mixed, mime ? { mimeType: mime, videoBitsPerSecond: 2500000 } : undefined);
+      state.mediaRecorder.ondataavailable = (ev) => {
+        if (ev.data?.size) state.recordChunks.push(ev.data);
+      };
+      state.mediaRecorder.onstop = () => {
+        cancelAnimationFrame(state.recordRaf);
+        state.recordRaf = 0;
+        try { state.recordAudioCtx?.close(); } catch {}
+        state.recordAudioCtx = null;
+        const blob = new Blob(state.recordChunks, { type: mime || 'video/webm' });
+        state.recordChunks = [];
+        if (!blob.size) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `meeting-${digitsOnly(state.roomId) || 'local'}-${Date.now()}.webm`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        toast('录制文件已下载到本地');
+      };
+      state.mediaRecorder.start(1000);
+      state.recordMode = 'local';
+      setRecordingUi(true, 'local');
+      toast('已开始浏览器录制（未配置云 API 时的回退方案）');
+    }
+
+    async function stopLocalRecording() {
+      const rec = state.mediaRecorder;
+      state.mediaRecorder = null;
+      if (!rec || rec.state === 'inactive') {
+        cancelAnimationFrame(state.recordRaf);
+        state.recordRaf = 0;
+        return;
+      }
+      await new Promise((resolve) => {
+        rec.addEventListener('stop', resolve, { once: true });
+        rec.stop();
+      });
+    }
+
+    async function stopRecording({ silent } = {}) {
+      if (!state.recording && !state.mediaRecorder && !state.recordTaskId) {
+        setRecordingUi(false);
+        return;
+      }
+      const mode = state.recordMode;
+      try {
+        if (mode === 'cloud') await stopCloudRecording();
+        else await stopLocalRecording();
+      } catch (e) {
+        console.error(e);
+        if (!silent) toast(`停止录制失败：${e.message || e}`);
+      } finally {
+        setRecordingUi(false);
+        state.recordMode = null;
+      }
+    }
+
+    async function toggleRecording() {
+      if (state.status !== 'joined' && state.status !== 'joining') {
+        toast('请先进入会议再录制');
+        return;
+      }
+      if (state.recording) {
+        await stopRecording();
+        return;
+      }
+
+      if (cloudRecordEnabled()) {
+        try {
+          await startCloudRecording();
+          return;
+        } catch (e) {
+          console.error(e);
+          toast(`云端录制不可用（${e.message || e}），改为本地录制`);
+        }
+      } else if (!trtcEnabled()) {
+        toast('将使用浏览器录制；配置 TRTC + 云 API 密钥后可走腾讯云端录制');
+      } else {
+        toast('未配置云 API SecretId/SecretKey，使用浏览器录制');
+      }
+
+      try {
+        await startLocalRecording();
+      } catch (e) {
+        console.error(e);
+        toast(`无法开始录制：${e.message || e}`);
+        setRecordingUi(false);
+      }
+    }
+
     function waitForElement(id, timeoutMs = 3000) {
       return new Promise((resolve, reject) => {
         const existing = document.getElementById(id);
@@ -1316,6 +1716,7 @@
     async function leaveMeeting() {
       clearInterval(state.waitTimer);
       state.waitTimer = null;
+      await stopRecording({ silent: true });
 
       if (state.role === 'host') {
         writeMeetingMeta(state.roomId, {
@@ -1522,10 +1923,16 @@
     async function applyDevices() {
       const sdk = Number(($('cfg-sdk').value || '').trim() || 0);
       const secret = String($('cfg-secret').value || '').trim();
+      const secretId = String($('cfg-secret-id').value || '').trim();
+      const apiSecret = String($('cfg-api-secret').value || '').trim();
       TRTC_CONFIG.sdkAppId = sdk;
       TRTC_CONFIG.secretKey = secret;
+      TRTC_CONFIG.secretId = secretId;
+      TRTC_CONFIG.apiSecretKey = apiSecret;
       localStorage.setItem('meet.sdkAppId', String(sdk || ''));
       localStorage.setItem('meet.secretKey', secret);
+      localStorage.setItem('meet.secretId', secretId);
+      localStorage.setItem('meet.apiSecretKey', apiSecret);
 
       state.cameraId = $('select-camera').value || state.cameraId;
       state.resolution = $('select-resolution').value || state.resolution;
@@ -1593,6 +2000,8 @@
 
       $('btn-share').addEventListener('click', openShareModal);
       $('btn-invite-bar').addEventListener('click', openShareModal);
+      $('btn-record').addEventListener('click', () => void toggleRecording());
+      $('btn-record-top').addEventListener('click', () => void toggleRecording());
       $('btn-close-share').addEventListener('click', closeShareModal);
       $('btn-copy-invite').addEventListener('click', () => {
         void copyText(buildInviteText(state.roomId, state.passcode), '邀请信息已复制');
@@ -1653,6 +2062,8 @@
     // 预填设备面板中的已存配置
     $('cfg-sdk').value = TRTC_CONFIG.sdkAppId || '';
     $('cfg-secret').value = TRTC_CONFIG.secretKey || '';
+    $('cfg-secret-id').value = TRTC_CONFIG.secretId || '';
+    $('cfg-api-secret').value = TRTC_CONFIG.apiSecretKey || '';
   </script>
 </body>
 </html>

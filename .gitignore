@@ -21,6 +21,7 @@ selenium-debug.log
 *.log
 .history
 .cspell
+node_modules
 
 package-lock.json
 yarn.lock
