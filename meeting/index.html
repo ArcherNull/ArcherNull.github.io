@@ -610,6 +610,7 @@
           <span class="meta-pill" id="wait-name-pill">--</span>
         </div>
         <div class="actions" style="margin-top:18px">
+          <button class="btn btn-primary" id="btn-wait-enter">立即进入会议</button>
           <button class="btn btn-ghost" id="btn-wait-leave">离开等候室</button>
         </div>
       </div>
@@ -726,12 +727,17 @@
 
   <script>
     /**
-     * TRTC 体验配置：可在此填写，或在会议内「设备」面板写入（会存 localStorage）。
+     * TRTC 体验配置：可在下方 DEFAULTS 填写（所有访问者共用），
+     * 或在会议内「设备」面板写入（仅存本机 localStorage）。
      * SecretKey 仅适合本地 Demo，正式环境必须服务端签发 UserSig。
      */
+    const TRTC_DEFAULTS = {
+      sdkAppId: 0,
+      secretKey: ''
+    };
     const TRTC_CONFIG = {
-      sdkAppId: Number(localStorage.getItem('meet.sdkAppId') || 0),
-      secretKey: String(localStorage.getItem('meet.secretKey') || ''),
+      sdkAppId: Number(localStorage.getItem('meet.sdkAppId') || TRTC_DEFAULTS.sdkAppId || 0),
+      secretKey: String(localStorage.getItem('meet.secretKey') || TRTC_DEFAULTS.secretKey || ''),
       expireTime: 604800
     };
 
@@ -1278,26 +1284,39 @@
       openShareModal();
     }
 
+    function canEnterFromWaitMeta(meta) {
+      return Boolean(meta && meta.started && meta.passcode === state.passcode && !meta.ended);
+    }
+
+    function tryEnterFromWaitSignal() {
+      if (state.status === 'joined' || state.status === 'joining') return false;
+      if (!state.roomId || state.role !== 'guest') return false;
+      if (screens.wait.classList.contains('hidden')) return false;
+
+      const meta = readMeetingMeta(state.roomId);
+      if (meta && meta.ended) {
+        $('wait-detail').textContent = '房主已结束会议，请稍后再试或联系房主重新发起。';
+        return false;
+      }
+      if (!canEnterFromWaitMeta(meta)) return false;
+
+      clearInterval(state.waitTimer);
+      state.waitTimer = null;
+      void enterMeetingRoom();
+      return true;
+    }
+
     function startWaitPolling() {
       clearInterval(state.waitTimer);
-      const tick = () => {
-        const meta = readMeetingMeta(state.roomId);
-        if (meta && meta.started && meta.passcode === state.passcode) {
-          clearInterval(state.waitTimer);
-          state.waitTimer = null;
-          void enterMeetingRoom();
-        } else if (meta && meta.ended) {
-          $('wait-detail').textContent = '房主已结束会议，请稍后再试或联系房主重新发起。';
-        }
-      };
+      const tick = () => { tryEnterFromWaitSignal(); };
       tick();
       state.waitTimer = setInterval(tick, 1200);
     }
 
-    function goWaitRoom() {
+    function goWaitRoom(detail) {
       $('wait-room-pill').textContent = `会议号 ${formatMeetingId(state.roomId)}`;
       $('wait-name-pill').textContent = state.displayName;
-      $('wait-detail').textContent = '会议尚未开启。房主开始后，您将自动进入会议室。';
+      $('wait-detail').textContent = detail || '会议尚未开启。房主开始后，您将自动进入会议室；也可点击「立即进入会议」。';
       showScreen('wait');
       startWaitPolling();
     }
@@ -1325,6 +1344,10 @@
         toast('会议密码不正确');
         return;
       }
+      if (meta?.ended) {
+        toast('该会议已结束，请联系房主重新发起');
+        return;
+      }
 
       state.role = 'guest';
       state.roomId = rid;
@@ -1332,18 +1355,31 @@
       state.displayName = displayName;
       state.userId = createUserId('guest');
 
-      // TRTC 已配置：凭会议号+密码直接进房（房主未到则房间内等待）
-      // 未配置 TRTC：依赖本机会议状态，未开启则进入等候室
+      // TRTC 已配置：凭会议号直接进房（可与房主互通）
       if (trtcEnabled()) {
         await enterMeetingRoom();
         if (!(meta && meta.started)) {
           toast('已进入会议室，等待房主或其他成员');
         }
-      } else if (meta && meta.started && meta.passcode === pwd) {
-        await enterMeetingRoom();
-      } else {
-        goWaitRoom();
+        return;
       }
+
+      // 本机已有「已开始」状态（同浏览器标签页）→ 直接进
+      if (canEnterFromWaitMeta(meta) && meta.passcode === pwd) {
+        await enterMeetingRoom();
+        return;
+      }
+
+      // 本机明确知道未开始 → 等候室（同浏览器可自动进）
+      if (meta && meta.passcode === pwd && !meta.started) {
+        goWaitRoom();
+        return;
+      }
+
+      // 无本机会议状态：通常是跨设备/跨浏览器。
+      // localStorage 无法同步房主状态，不能再卡在等候室，直接进会议室。
+      await enterMeetingRoom();
+      toast('已进入会议。跨设备音视频请双方在「设备」中配置相同的 TRTC');
     }
 
     async function toggleMic() {
@@ -1471,6 +1507,11 @@
           name: $('join-name').value
         });
       });
+      $('btn-wait-enter').addEventListener('click', () => {
+        clearInterval(state.waitTimer);
+        state.waitTimer = null;
+        void enterMeetingRoom();
+      });
       $('btn-wait-leave').addEventListener('click', () => {
         clearInterval(state.waitTimer);
         state.waitTimer = null;
@@ -1507,11 +1548,17 @@
       try {
         state.channel = new BroadcastChannel('cloud-meet');
         state.channel.onmessage = (ev) => {
-          if (ev.data?.type === 'meeting-meta' && state.status !== 'joined' && screens.wait.classList.contains('hidden') === false) {
-            // wait polling handles it
-          }
+          if (ev.data?.type !== 'meeting-meta') return;
+          if (digitsOnly(ev.data.roomId) !== digitsOnly(state.roomId)) return;
+          tryEnterFromWaitSignal();
         };
       } catch {}
+
+      // 同浏览器其他标签页写入 localStorage 时触发（跨设备不会触发）
+      window.addEventListener('storage', (ev) => {
+        if (!ev.key || ev.key !== meetingStorageKey(state.roomId)) return;
+        tryEnterFromWaitSignal();
+      });
     }
 
     async function bootFromUrl() {
