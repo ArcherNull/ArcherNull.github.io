@@ -103,6 +103,13 @@ function bindExit(kit: RoomKit) {
   })
 }
 
+function startQuickMeeting() {
+  if (busy.value || inRoom.value) return
+  mode.value = 'create'
+  form.roomId = randomRoomId()
+  void enterMeeting('create')
+}
+
 async function enterMeeting(action: 'create' | 'join') {
   if (busy.value || inRoom.value) return
   busy.value = true
@@ -269,7 +276,7 @@ onUnmounted(() => {
             <input v-model="form.password" placeholder="可选；设置后入会需校验" />
           </label>
 
-          <div class="actions">
+          <div class="actions" :class="{ 'with-quick': mode === 'create' }">
             <button
               type="button"
               class="primary"
@@ -279,6 +286,15 @@ onUnmounted(() => {
               {{ busy ? '进入中…' : mode === 'create' ? '创建并进入' : '加入会议' }}
             </button>
             <button type="button" class="secondary" @click="form.roomId = randomRoomId()">生成房间号</button>
+            <button
+              v-if="mode === 'create'"
+              type="button"
+              class="secondary quick"
+              :disabled="busy"
+              @click="startQuickMeeting"
+            >
+              快速会议
+            </button>
           </div>
         </div>
       </section>
@@ -540,6 +556,10 @@ label span {
   margin-top: 4px;
 }
 
+.actions.with-quick {
+  grid-template-columns: 1.3fr 1fr 1fr;
+}
+
 .primary,
 .secondary {
   min-height: 44px;
@@ -571,6 +591,20 @@ label span {
 
 .secondary:hover {
   background: #e2eeff;
+}
+
+.secondary.quick {
+  color: #fff;
+  background: linear-gradient(135deg, #1bbf83, #0d9f6e);
+}
+
+.secondary.quick:hover:not(:disabled) {
+  background: linear-gradient(135deg, #17b079, #0b8f63);
+}
+
+.secondary.quick:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .detail-content.roomkit {
