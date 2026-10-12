@@ -1,0 +1,7 @@
+<web-view wx:if="{{src}}" src="{{src}}" bindmessage="onMessage" bindload="onLoadWeb" binderror="onErrorWeb"></web-view>
+
+<view wx:else class="empty">
+  <text class="empty-title">未找到会议链接</text>
+  <text class="empty-desc">请返回上一页重新进入会议</text>
+  <button class="back-btn" bindtap="onBack">返回</button>
+</view>

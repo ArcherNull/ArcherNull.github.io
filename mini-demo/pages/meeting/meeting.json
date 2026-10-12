@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "会议中",
+  "navigationStyle": "default",
+  "renderer": "webview",
+  "usingComponents": {}
+}

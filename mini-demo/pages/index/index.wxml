@@ -1,0 +1,109 @@
+<navigation-bar title="" back="{{false}}" color="#0f2243" background="transparent"></navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+  <view class="page">
+    <view class="brand">
+      <text class="brand-name">腾讯视立方</text>
+      <text class="brand-sub">TUIRoomKit · 多人音视频会议</text>
+    </view>
+
+    <view class="panel">
+      <view class="panel-head">
+        <view class="panel-kicker">JOIN MEETING</view>
+        <text class="panel-title">加入会议</text>
+        <text class="panel-desc">填写入会信息，或粘贴会议链接直接进入</text>
+      </view>
+
+      <view class="section">
+        <text class="section-title">身份信息</text>
+        <view class="field">
+          <text class="field-label">用户 ID</text>
+          <view class="input-shell">
+            <input
+              class="field-input"
+              value="{{form.userId}}"
+              placeholder="同一应用内唯一，多端请勿复用"
+              placeholder-class="ph"
+              bindinput="onFieldInput"
+              data-key="userId"
+            />
+          </view>
+        </view>
+        <view class="field">
+          <text class="field-label">显示昵称</text>
+          <view class="input-shell">
+            <input
+              class="field-input"
+              value="{{form.userName}}"
+              placeholder="会中展示名称，可选"
+              placeholder-class="ph"
+              bindinput="onFieldInput"
+              data-key="userName"
+            />
+          </view>
+        </view>
+      </view>
+
+      <view class="section">
+        <text class="section-title">房间信息</text>
+        <view class="field">
+          <text class="field-label">房间 ID</text>
+          <view class="input-shell">
+            <input
+              class="field-input mono"
+              value="{{form.roomId}}"
+              placeholder="例如 room_123456"
+              placeholder-class="ph"
+              bindinput="onFieldInput"
+              data-key="roomId"
+            />
+          </view>
+        </view>
+        <view class="field">
+          <text class="field-label">会议密码</text>
+          <view class="input-shell">
+            <input
+              class="field-input"
+              password
+              value="{{form.password}}"
+              placeholder="可选；设置后入会需校验"
+              placeholder-class="ph"
+              bindinput="onFieldInput"
+              data-key="password"
+            />
+          </view>
+        </view>
+      </view>
+
+      <view class="section link-section {{hasLink ? 'is-active' : ''}}">
+        <view class="section-head">
+          <text class="section-title">会议链接</text>
+          <text wx:if="{{hasLink}}" class="link-badge">优先使用链接</text>
+        </view>
+        <view class="input-shell link-shell">
+          <textarea
+            class="field-textarea"
+            value="{{form.meetUrl}}"
+            placeholder="粘贴 meet.html?roomId=...&action=join 链接"
+            placeholder-class="ph"
+            maxlength="-1"
+            auto-height
+            bindinput="onFieldInput"
+            data-key="meetUrl"
+          />
+        </view>
+        <view class="link-tools">
+          <view class="chip" bindtap="onPasteLink" hover-class="chip-hover">粘贴链接</view>
+          <view class="chip chip-muted" bindtap="onClearLink" hover-class="chip-hover">清空</view>
+        </view>
+        <text class="field-hint">有链接时直接打开 WebView；无链接则按房间号生成加入地址。</text>
+      </view>
+
+      <button class="btn-primary" hover-class="btn-primary-hover" bindtap="onJoinMeeting">
+        加入会议
+      </button>
+    </view>
+
+    <text class="footnote">进入后将在小程序 WebView 中加载会议 H5</text>
+  </view>
+</scroll-view>
