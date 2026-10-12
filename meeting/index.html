@@ -472,6 +472,10 @@
     }
     .tool:hover { background: rgba(80, 80, 80, 0.85); }
     .tool:active { transform: scale(0.96); }
+    .tool:disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
     .tool svg { width: 24px; height: 24px; }
     .tool.off {
       background: rgba(255, 255, 255, 0.92);
@@ -989,6 +993,7 @@
       cameras: [],
       cameraId: '',
       useFrontCamera: true,
+      cameraSwitching: false,
       startedRemoteKeys: new Set(),
       speakerMutedRef: false,
       inviteToken: '',
@@ -1256,15 +1261,46 @@
       return TYPE.QOS_PREFERENCE_CLEAR;
     }
 
+    function isMobileDevice() {
+      const ua = navigator.userAgent || '';
+      if (/Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+        return true;
+      }
+      // iPadOS 桌面 UA
+      return navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua);
+    }
+
+    function detectFacing(device) {
+      try {
+        const caps = typeof device.getCapabilities === 'function' ? device.getCapabilities() : null;
+        const mode = caps?.facingMode;
+        const facing = Array.isArray(mode) ? mode[0] : mode;
+        if (facing === 'user' || facing === 'environment') return facing;
+      } catch {
+        /* ignore */
+      }
+      const label = String(device.label || '');
+      if (/front|user|前置|前摄|前/i.test(label)) return 'user';
+      if (/back|rear|environment|后置|后摄|后/i.test(label)) return 'environment';
+      return '';
+    }
+
     function getLocalVideoOption() {
       const preset = getQualityPreset();
       const option = {
         fillMode: 'cover',
-        mirror: true,
+        // 前置镜像、后置不镜像，符合常见通话体验
+        mirror: !!state.useFrontCamera,
         profile: preset.profile
       };
-      if (state.cameraId) option.cameraId = state.cameraId;
-      else option.useFrontCamera = state.useFrontCamera;
+      // 移动端必须用 useFrontCamera；若同时传 cameraId，SDK 会优先 cameraId 导致翻转失败
+      if (isMobileDevice()) {
+        option.useFrontCamera = state.useFrontCamera;
+      } else if (state.cameraId) {
+        option.cameraId = state.cameraId;
+      } else {
+        option.useFrontCamera = state.useFrontCamera;
+      }
       const qos = resolveQosPreference(preset.qos);
       if (qos !== undefined) option.qosPreference = qos;
       return option;
@@ -1273,7 +1309,11 @@
     function syncFlipCamUi() {
       const wrap = $('wrap-flip-cam');
       if (!wrap) return;
-      const canFlip = state.cameras.length > 1 && state.status === 'joined' && state.camOn;
+      // 手机前后摄切换不依赖设备列表数量（enumerate 常只返回 1 个）
+      const canFlip =
+        state.status === 'joined' &&
+        state.camOn &&
+        (isMobileDevice() || state.cameras.length > 1);
       wrap.classList.toggle('hidden', !canFlip);
     }
 
@@ -1290,62 +1330,99 @@
         console.warn('refreshCameras failed', e);
       }
 
-      state.cameras = (list || []).map((d, i) => ({
-        deviceId: d.deviceId || '',
-        label: d.label || `摄像头 ${i + 1}`
-      })).filter((d) => d.deviceId);
+      state.cameras = (list || []).map((d, i) => {
+        const facing = detectFacing(d);
+        return {
+          deviceId: d.deviceId || '',
+          label: d.label || (facing === 'user' ? '前置摄像头' : facing === 'environment' ? '后置摄像头' : `摄像头 ${i + 1}`),
+          facing
+        };
+      }).filter((d) => d.deviceId);
 
       if (state.cameraId && !state.cameras.some((c) => c.deviceId === state.cameraId)) {
         state.cameraId = state.cameras[0]?.deviceId || '';
       }
       if (!state.cameraId && state.cameras.length) {
-        // 优先前置摄像头
-        const front = state.cameras.find((c) => /front|user|前置|前/i.test(c.label));
-        state.cameraId = (front || state.cameras[0]).deviceId;
-        state.useFrontCamera = Boolean(front) || state.cameras.length === 1;
+        const front = state.cameras.find((c) => c.facing === 'user');
+        const pick = front || state.cameras[0];
+        state.cameraId = pick.deviceId;
+        if (pick.facing === 'user') state.useFrontCamera = true;
+        else if (pick.facing === 'environment') state.useFrontCamera = false;
+        else state.useFrontCamera = Boolean(front) || state.cameras.length === 1;
       }
       syncFlipCamUi();
       return state.cameras;
     }
 
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    /** 应用摄像头切换；update 失败时 stop→短暂释放→start（兼容部分 Android / 微信内置浏览器） */
+    async function applyLocalCameraSwitch() {
+      const option = getLocalVideoOption();
+      try {
+        await state.trtc.updateLocalVideo({ option });
+        fitHost($('local-video'));
+        return;
+      } catch (e) {
+        console.warn('updateLocalVideo camera switch failed, restart capture', e);
+      }
+
+      const view = await waitForElement('local-video');
+      await state.trtc.stopLocalVideo();
+      // 部分机型释放摄像头需要短暂间隔，否则 start 会 NotReadableError
+      await sleep(isMobileDevice() ? 180 : 80);
+      await state.trtc.startLocalVideo({ view, option });
+      fitHost(view);
+    }
+
     async function flipCamera() {
-      if (!state.trtc || state.status !== 'joined' || !state.camOn) return;
-      if (state.cameras.length < 2) {
-        await refreshCameras();
+      if (!state.trtc || state.status !== 'joined' || !state.camOn || state.cameraSwitching) return;
+
+      const mobile = isMobileDevice();
+      if (!mobile) {
+        if (state.cameras.length < 2) await refreshCameras();
         if (state.cameras.length < 2) {
           toast('未检测到多个摄像头');
           return;
         }
       }
 
-      const idx = Math.max(0, state.cameras.findIndex((c) => c.deviceId === state.cameraId));
-      const next = state.cameras[(idx + 1) % state.cameras.length];
-      state.cameraId = next.deviceId;
-      state.useFrontCamera = /front|user|前置|前/i.test(next.label);
+      state.cameraSwitching = true;
+      const btn = $('btn-flip-cam');
+      if (btn) btn.disabled = true;
+
+      const prevFront = state.useFrontCamera;
+      const prevCameraId = state.cameraId;
 
       try {
-        await state.trtc.updateLocalVideo({
-          option: getLocalVideoOption()
-        });
-        fitHost($('local-video'));
-        toast(`已切换：${next.label}`);
-      } catch (e) {
-        console.error(e);
-        try {
-          const view = await waitForElement('local-video');
-          await state.trtc.stopLocalVideo();
-          await state.trtc.startLocalVideo({
-            view,
-            option: getLocalVideoOption()
-          });
-          fitHost(view);
+        if (mobile) {
+          // 官方推荐：移动端用 useFrontCamera 翻转，不要依赖 cameraId
+          state.useFrontCamera = !state.useFrontCamera;
+          state.cameraId = '';
+          await applyLocalCameraSwitch();
+          toast(state.useFrontCamera ? '已切换至前置摄像头' : '已切换至后置摄像头');
+        } else {
+          const idx = Math.max(0, state.cameras.findIndex((c) => c.deviceId === state.cameraId));
+          const next = state.cameras[(idx + 1) % state.cameras.length];
+          state.cameraId = next.deviceId;
+          if (next.facing === 'user') state.useFrontCamera = true;
+          else if (next.facing === 'environment') state.useFrontCamera = false;
+          else state.useFrontCamera = /front|user|前置|前/i.test(next.label);
+          await applyLocalCameraSwitch();
           toast(`已切换：${next.label}`);
-        } catch (err) {
-          console.error(err);
-          toast('翻转摄像头失败');
         }
+      } catch (err) {
+        console.error(err);
+        state.useFrontCamera = prevFront;
+        state.cameraId = prevCameraId;
+        toast('翻转摄像头失败，请重试');
+      } finally {
+        state.cameraSwitching = false;
+        if (btn) btn.disabled = false;
+        syncFlipCamUi();
       }
-      syncFlipCamUi();
     }
 
     function syncQualityUi() {

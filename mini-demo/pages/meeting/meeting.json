@@ -1,6 +1,9 @@
 {
   "navigationBarTitleText": "会议中",
   "navigationStyle": "default",
+  "navigationBarBackgroundColor": "#000000",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#000000",
   "renderer": "webview",
   "usingComponents": {}
 }

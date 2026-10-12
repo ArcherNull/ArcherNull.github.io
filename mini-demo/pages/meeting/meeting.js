@@ -31,9 +31,11 @@ Page({
 
     this.setData({ src })
 
-    if (src) {
-      wx.setNavigationBarTitle({ title })
-    }
+    wx.setNavigationBarColor({
+      frontColor: '#ffffff',
+      backgroundColor: '#000000',
+    })
+    wx.setNavigationBarTitle({ title })
   },
 
   onMessage() {
