@@ -312,6 +312,13 @@
       border: 2px solid rgba(255, 255, 255, 0.12);
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
     }
+    #remote-avatar {
+      width: 64px;
+      height: 64px;
+      font-size: 1.35rem;
+      margin-bottom: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
     .placeholder-text {
       text-align: center;
       color: var(--muted);
@@ -425,6 +432,20 @@
       font-size: 1.15rem;
       font-weight: 600;
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    }
+    .call-top .call-duration {
+      display: block;
+      margin-top: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+      font-variant-numeric: tabular-nums;
+    }
+    .call-top.waiting .call-duration {
+      color: rgba(255, 255, 255, 0.72);
     }
     .call-top span {
       display: inline-flex;
@@ -717,6 +738,10 @@
       font-size: .9rem;
     }
     .action-item.active .check { opacity: 1; }
+    /* 本地录制仅在独立浏览器展示；小程序 web-view 内隐藏 */
+    html:not(.env-browser) .browser-only {
+      display: none !important;
+    }
     .action-cancel {
       width: 100%;
       min-height: 52px;
@@ -850,6 +875,7 @@
 
       <header class="call-top waiting" id="call-top">
         <strong id="call-title">通话中</strong>
+        <div class="call-duration" id="call-duration">00:00</div>
         <span id="call-sub">连接中…</span>
       </header>
 
@@ -908,7 +934,8 @@
         <div class="action-title">更多操作</div>
         <button class="action-item" type="button" id="action-invite">邀请好友</button>
         <button class="action-item" type="button" id="action-watermark">开启全屏水印</button>
-        <button class="action-item" type="button" id="action-record">开始本地录制</button>
+        <button class="action-item" type="button" id="action-cloud-record">开始云端录制</button>
+        <button class="action-item browser-only" type="button" id="action-record">开始本地录制</button>
       </div>
       <div class="action-group">
         <div class="action-title">画质 / 流畅度</div>
@@ -999,6 +1026,9 @@
       inviteToken: '',
       watermarkOn: localStorage.getItem('call.watermark') === '1',
       recording: false,
+      cloudRecording: false,
+      cloudSwitching: false,
+      userDefineRecordId: '',
       mediaRecorder: null,
       recordChunks: [],
       recordRaf: 0,
@@ -1006,7 +1036,10 @@
       recordStartedAt: 0,
       recordAudioCtx: null,
       recordMicStream: null,
-      wmRaf: 0
+      wmRaf: 0,
+      isBrowser: true,
+      callStartedAt: 0,
+      callDurationTimer: null
     };
 
     const $ = (id) => document.getElementById(id);
@@ -1434,11 +1467,38 @@
 
     function syncMoreMenuLabels() {
       const wmBtn = $('action-watermark');
+      const cloudBtn = $('action-cloud-record');
       const recBtn = $('action-record');
       if (wmBtn) wmBtn.textContent = state.watermarkOn ? '关闭全屏水印' : '开启全屏水印';
+      if (cloudBtn) cloudBtn.textContent = state.cloudRecording ? '停止云端录制' : '开始云端录制';
       if (recBtn) recBtn.textContent = state.recording ? '停止本地录制' : '开始本地录制';
       wmBtn?.classList.toggle('active', state.watermarkOn);
+      cloudBtn?.classList.toggle('active', state.cloudRecording);
       recBtn?.classList.toggle('active', state.recording);
+    }
+
+    /** 独立浏览器（非微信小程序 web-view）才展示本地录制 */
+    function detectBrowserEnv() {
+      const ua = navigator.userAgent || '';
+      const apply = (isMiniProgram) => {
+        state.isBrowser = !isMiniProgram;
+        document.documentElement.classList.toggle('env-browser', state.isBrowser);
+        document.documentElement.classList.toggle('env-miniprogram', !state.isBrowser);
+      };
+      // 默认按浏览器展示；确认处于小程序 web-view 后再隐藏本地录制
+      apply(/miniProgram/i.test(ua));
+      try {
+        if (typeof wx !== 'undefined' && wx.miniProgram?.getEnv) {
+          wx.miniProgram.getEnv((res) => apply(!!res?.miniprogram));
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    function makeCloudRecordId() {
+      const raw = `call_${state.roomId || 0}_${state.userId || 'u'}_${Date.now().toString(36)}`;
+      return String(raw).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
     }
 
     function openMoreMenu() {
@@ -1552,7 +1612,15 @@
       return `${m}:${s}`;
     }
 
-    function setRecordingBanner(on) {
+    function recordingBannerLabel() {
+      if (state.recording && state.cloudRecording) return '本地+云端录制中';
+      if (state.cloudRecording) return '云端录制中';
+      if (state.recording) return '本地录制中';
+      return '录制中';
+    }
+
+    function syncRecordingBanner() {
+      const on = state.recording || state.cloudRecording;
       const banner = $('rec-banner');
       banner?.classList.toggle('hidden', !on);
       if (!on) {
@@ -1560,12 +1628,22 @@
         state.recordTimer = null;
         return;
       }
-      state.recordStartedAt = Date.now();
-      $('rec-banner-text').textContent = '录制中 00:00';
+      if (!state.recordTimer) {
+        state.recordStartedAt = Date.now();
+      }
+      const tick = () => {
+        $('rec-banner-text').textContent =
+          `${recordingBannerLabel()} ${formatRecordDuration(Date.now() - state.recordStartedAt)}`;
+      };
+      tick();
       clearInterval(state.recordTimer);
-      state.recordTimer = setInterval(() => {
-        $('rec-banner-text').textContent = `录制中 ${formatRecordDuration(Date.now() - state.recordStartedAt)}`;
-      }, 500);
+      state.recordTimer = setInterval(tick, 500);
+    }
+
+    function setRecordingBanner(on) {
+      // 兼容旧调用：本地录制启停时刷新横幅
+      if (on && !state.recordStartedAt) state.recordStartedAt = Date.now();
+      syncRecordingBanner();
     }
 
     function findStageVideos() {
@@ -1581,11 +1659,16 @@
 
     async function startLocalRecording() {
       if (state.recording) return;
+      if (!state.isBrowser) {
+        toast('本地录制仅支持浏览器环境');
+        return;
+      }
       if (state.status !== 'joined') {
         toast('请先进入房间再录制');
         return;
       }
-      if (typeof MediaRecorder === 'undefined') {
+      if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement === 'undefined'
+        || typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
         toast('当前浏览器不支持本地录制');
         return;
       }
@@ -1698,7 +1781,7 @@
       };
       recorder.start(1000);
       state.recording = true;
-      setRecordingBanner(true);
+      syncRecordingBanner();
       syncMoreMenuLabels();
       toast('已开始本地录制');
     }
@@ -1708,7 +1791,7 @@
       const recorder = state.mediaRecorder;
       state.mediaRecorder = null;
       state.recording = false;
-      setRecordingBanner(false);
+      syncRecordingBanner();
       syncMoreMenuLabels();
       if (recorder && recorder.state !== 'inactive') {
         await new Promise((resolve) => {
@@ -1724,8 +1807,119 @@
 
     async function toggleLocalRecording() {
       closeMoreMenu();
+      if (!state.isBrowser) {
+        toast('本地录制仅支持浏览器环境');
+        return;
+      }
       if (state.recording) await stopLocalRecording();
       else await startLocalRecording();
+    }
+
+    async function ensureCloudMix() {
+      if (!state.cloudRecording || !state.trtc || state.status !== 'joined') return;
+      const trtc = state.trtc;
+      const TRTC = getTRTC();
+      if (!TRTC || typeof trtc.startMixTranscode !== 'function') return;
+
+      const localId = state.userId;
+      const remoteId = state.remoteUserId;
+      const W = 1280;
+      const H = 720;
+      const mixUsers = remoteId
+        ? [
+            {
+              userId: remoteId,
+              width: W,
+              height: H,
+              locationX: 0,
+              locationY: 0,
+              zOrder: 1,
+              pureAudio: false,
+              streamType: TRTC.TYPE.STREAM_TYPE_MAIN
+            },
+            {
+              userId: localId,
+              width: 320,
+              height: 180,
+              locationX: W - 320 - 24,
+              locationY: H - 180 - 24,
+              zOrder: 2,
+              pureAudio: false,
+              streamType: TRTC.TYPE.STREAM_TYPE_MAIN
+            }
+          ]
+        : [
+            {
+              userId: localId,
+              width: W,
+              height: H,
+              locationX: 0,
+              locationY: 0,
+              zOrder: 1,
+              pureAudio: false,
+              streamType: TRTC.TYPE.STREAM_TYPE_MAIN
+            }
+          ];
+
+      try {
+        await trtc.startMixTranscode({
+          mode: 'manual',
+          videoWidth: W,
+          videoHeight: H,
+          videoBitrate: 1500,
+          videoFramerate: 15,
+          videoGOP: 2,
+          audioSampleRate: 48000,
+          audioBitrate: 64,
+          audioChannels: 1,
+          mixUsers
+        });
+      } catch (e) {
+        // 部分应用未开通混流/旧版录制，单流录制仍可继续
+        console.warn('startMixTranscode failed', e);
+      }
+    }
+
+    async function stopCloudMix() {
+      if (!state.trtc || typeof state.trtc.stopMixTranscode !== 'function') return;
+      try {
+        await state.trtc.stopMixTranscode();
+      } catch (e) {
+        console.warn('stopMixTranscode failed', e);
+      }
+    }
+
+    async function toggleCloudRecording() {
+      closeMoreMenu();
+      if (state.status !== 'joined') {
+        toast('请先进入房间再云端录制');
+        return;
+      }
+      if (state.cloudSwitching) return;
+      state.cloudSwitching = true;
+      const enable = !state.cloudRecording;
+      try {
+        toast(enable ? '正在开启云端录制…' : '正在停止云端录制…');
+        // 指定用户录制需在进房时携带 userDefineRecordId，因此通过重进房切换
+        await enterRoom({
+          rejoin: true,
+          cloudRecord: enable
+        });
+        if (state.status === 'joined') {
+          toast(
+            enable
+              ? '已开启云端录制（需控制台开通「指定用户录制」）'
+              : '已停止云端录制，文件稍后写入云存储'
+          );
+        }
+      } catch (e) {
+        console.error(e);
+        toast(`云端录制失败：${e?.message || e}`);
+      } finally {
+        state.cloudSwitching = false;
+        syncMoreMenuLabels();
+        syncRecordingBanner();
+      }
     }
 
     function closeMoreMenu() {
@@ -1767,6 +1961,42 @@
       }
     }
 
+    function formatCallDuration(ms) {
+      const sec = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      const mm = String(m).padStart(2, '0');
+      const ss = String(s).padStart(2, '0');
+      if (h > 0) return `${String(h).padStart(2, '0')}:${mm}:${ss}`;
+      return `${mm}:${ss}`;
+    }
+
+    function syncCallDuration() {
+      const el = $('call-duration');
+      if (!el) return;
+      if (!state.callStartedAt || (state.status !== 'joined' && state.status !== 'joining')) {
+        el.textContent = '00:00';
+        return;
+      }
+      el.textContent = formatCallDuration(Date.now() - state.callStartedAt);
+    }
+
+    function startCallDurationTimer({ reset = false } = {}) {
+      if (reset || !state.callStartedAt) state.callStartedAt = Date.now();
+      clearInterval(state.callDurationTimer);
+      syncCallDuration();
+      state.callDurationTimer = setInterval(syncCallDuration, 1000);
+    }
+
+    function stopCallDurationTimer() {
+      clearInterval(state.callDurationTimer);
+      state.callDurationTimer = null;
+      state.callStartedAt = 0;
+      const el = $('call-duration');
+      if (el) el.textContent = '00:00';
+    }
+
     function updateCallHeader() {
       const top = $('call-top');
       if (state.remoteUserId) {
@@ -1782,6 +2012,7 @@
         $('remote-avatar').textContent = '?';
         $('placeholder-sub').textContent = '请另一端使用相同 RoomId、不同 UserId 进房';
       }
+      syncCallDuration();
       $('local-badge').textContent = state.displayName || '我';
       $('local-avatar').textContent = String(state.displayName || state.userId || '我').slice(0, 1).toUpperCase();
     }
@@ -1998,7 +2229,16 @@
       }
     }
 
-    async function enterRoom() {
+    /**
+     * @param {{ rejoin?: boolean, cloudRecord?: boolean }} [options]
+     * rejoin: 通话中重进房（用于开关云端录制）
+     * cloudRecord: 是否携带 userDefineRecordId 开启指定用户云端录制
+     */
+    async function enterRoom(options = {}) {
+      const rejoin = !!options.rejoin;
+      const wantCloud =
+        typeof options.cloudRecord === 'boolean' ? options.cloudRecord : state.cloudRecording;
+
       let TRTC;
       try {
         TRTC = await ensureTrtcSdk();
@@ -2009,9 +2249,15 @@
 
       const sdkAppId = Number(String($('sdk-app-id').value || '').trim());
       const secretKey = String($('secret-key').value || '').trim();
-      const userId = String($('user-id').value || '').trim();
-      const roomId = Number(String($('room-id').value || '').trim());
-      const displayName = String($('display-name').value || '').trim();
+      const userId = rejoin
+        ? state.userId
+        : String($('user-id').value || '').trim();
+      const roomId = rejoin
+        ? Number(state.roomId)
+        : Number(String($('room-id').value || '').trim());
+      const displayName = rejoin
+        ? state.displayName
+        : String($('display-name').value || '').trim();
 
       if (!sdkAppId || !secretKey) {
         toast('请填写 SDKAppId 与 SecretKey');
@@ -2022,30 +2268,46 @@
         return;
       }
 
-      saveForm();
+      const prevMic = rejoin ? state.micOn : true;
+      const prevCam = rejoin ? state.camOn : true;
+      const prevSpeaker = rejoin ? state.speakerOn : true;
+
+      if (!rejoin) {
+        saveForm();
+        state.userId = userId;
+        state.roomId = roomId;
+        state.displayName = displayName || userId;
+        state.remoteUserId = '';
+        state.cloudRecording = false;
+        state.userDefineRecordId = '';
+      }
+
       state.status = 'joining';
-      state.userId = userId;
-      state.roomId = roomId;
-      state.displayName = displayName || userId;
-      state.remoteUserId = '';
       state.startedRemoteKeys.clear();
-      state.micOn = true;
-      state.camOn = true;
-      state.speakerOn = true;
-      state.speakerMutedRef = false;
+      state.micOn = prevMic;
+      state.camOn = prevCam;
+      state.speakerOn = prevSpeaker;
+      state.speakerMutedRef = !prevSpeaker;
 
       setFormLocked(true);
-      setLobbyStatus('joining', '进房中');
-      setStatusText('正在进入房间并采集音视频…');
-      setMicUi(true);
-      setCamUi(true);
-      setSpeakerUi(true);
-      setRemoteVisible(false);
+      setLobbyStatus('joining', rejoin ? (wantCloud ? '开启云录' : '停止云录') : '进房中');
+      setStatusText(rejoin ? '正在切换云端录制状态…' : '正在进入房间并采集音视频…');
+      setMicUi(prevMic);
+      setCamUi(prevCam);
+      setSpeakerUi(prevSpeaker);
+      if (!rejoin) setRemoteVisible(false);
       updateCallHeader();
       showScreen('call');
 
       try {
+        if (rejoin) await stopCloudMix();
         await destroyTrtc();
+        if (rejoin) {
+          $('remote-video').innerHTML = '';
+          $('local-video').innerHTML = '';
+          setRemoteVisible(false);
+        }
+
         const userSig = genTestUserSig(userId, sdkAppId, secretKey, TRTC_DEFAULTS.expireTime);
         const trtc = TRTC.create();
         state.trtc = trtc;
@@ -2054,6 +2316,7 @@
           state.remoteUserId = event.userId;
           updateCallHeader();
           toast(`${event.userId} 已加入`);
+          if (state.cloudRecording) void ensureCloudMix();
         });
 
         trtc.on(TRTC.EVENT.REMOTE_USER_EXIT, (event) => {
@@ -2068,12 +2331,14 @@
           setRemoteVisible(false);
           updateCallHeader();
           toast(`${event.userId} 已离开`);
+          if (state.cloudRecording) void ensureCloudMix();
         });
 
         trtc.on(TRTC.EVENT.REMOTE_VIDEO_AVAILABLE, (event) => {
           state.remoteUserId = event.userId;
           updateCallHeader();
           void playRemoteVideo(event.userId, event.streamType);
+          if (state.cloudRecording) void ensureCloudMix();
         });
 
         trtc.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (event) => {
@@ -2102,24 +2367,33 @@
           });
         }
 
-        // 与视立方 / 参考 Demo 一致：使用数字 roomId
-        await trtc.enterRoom({
+        const enterParams = {
           roomId,
           sdkAppId,
           userId,
           userSig,
           scene: TRTC.TYPE.SCENE_RTC
-        });
+        };
+        if (wantCloud) {
+          state.userDefineRecordId = makeCloudRecordId();
+          enterParams.userDefineRecordId = state.userDefineRecordId;
+        } else {
+          state.userDefineRecordId = '';
+        }
+
+        await trtc.enterRoom(enterParams);
 
         await refreshCameras();
 
         const localView = await waitForElement('local-video');
         await nextFrame();
-        await trtc.startLocalVideo({
-          view: localView,
-          option: getLocalVideoOption()
-        });
-        fitHost(localView);
+        if (prevCam) {
+          await trtc.startLocalVideo({
+            view: localView,
+            option: getLocalVideoOption()
+          });
+          fitHost(localView);
+        }
         syncQualityUi();
 
         await trtc.startLocalAudio({
@@ -2129,33 +2403,54 @@
             autoGainControl: true
           }
         });
+        if (!prevMic) {
+          try { await trtc.updateLocalAudio({ mute: true }); } catch {}
+        }
 
-        await trtc.muteRemoteAudio('*', false);
+        await trtc.muteRemoteAudio('*', !prevSpeaker);
 
         state.status = 'joined';
-        state.inviteToken = randomInviteToken();
+        state.cloudRecording = wantCloud;
+        if (!rejoin) state.inviteToken = randomInviteToken();
+        // 重进房（云端录制切换）不重置通话时长
+        startCallDurationTimer({ reset: !rejoin });
         setLobbyStatus('ready', '通话中');
-        setStatusText(`已进入房间 ${roomId}。可点「邀请」复制链接给对方。`);
+        setStatusText(
+          wantCloud
+            ? `已进入房间 ${roomId} · 云端录制中（${state.userDefineRecordId}）`
+            : `已进入房间 ${roomId}。可点「邀请」复制链接给对方。`
+        );
         updateCallHeader();
         syncFlipCamUi();
+        syncMoreMenuLabels();
+        syncRecordingBanner();
         if (state.watermarkOn) setWatermarkOn(true);
-        toast('已进入房间，可邀请好友');
-        // 权限授权后标签更完整，再刷一次摄像头列表
+        if (!rejoin) toast('已进入房间，可邀请好友');
         void refreshCameras();
+        if (wantCloud) void ensureCloudMix();
       } catch (err) {
         console.error(err);
         state.status = 'error';
+        state.cloudRecording = false;
+        state.userDefineRecordId = '';
+        if (!rejoin) stopCallDurationTimer();
         setLobbyStatus('error', '失败');
         setStatusText(`进房失败：${err?.message || err}`);
         toast(`进房失败：${err?.message || err}`);
         await destroyTrtc();
         showScreen('lobby');
         setFormLocked(false);
+        syncRecordingBanner();
+        syncMoreMenuLabels();
       }
     }
 
     async function leaveRoom() {
       await stopLocalRecording({ silent: true });
+      await stopCloudMix();
+      state.cloudRecording = false;
+      state.userDefineRecordId = '';
+      stopCallDurationTimer();
       stopWatermarkLoop();
       await destroyTrtc();
       state.startedRemoteKeys.clear();
@@ -2165,6 +2460,8 @@
       $('local-video').innerHTML = '';
       setRemoteVisible(false);
       syncFlipCamUi();
+      syncRecordingBanner();
+      syncMoreMenuLabels();
       setFormLocked(false);
       setLobbyStatus('ready', '就绪');
       setStatusText('已挂断。可修改参数后再次进入房间。');
@@ -2249,7 +2546,8 @@
         setTimeout(openInvitePanel, 180);
       });
       $('action-watermark').addEventListener('click', toggleWatermark);
-      $('action-record').addEventListener('click', () => void toggleLocalRecording());
+      $('action-cloud-record')?.addEventListener('click', () => void toggleCloudRecording());
+      $('action-record')?.addEventListener('click', () => void toggleLocalRecording());
       $('more-mask').addEventListener('click', (e) => {
         if (e.target === $('more-mask')) closeMoreMenu();
         const q = e.target.closest('[data-quality]');
@@ -2290,6 +2588,7 @@
       });
     }
 
+    detectBrowserEnv();
     loadForm();
     if (!QUALITY_PRESETS[state.quality]) state.quality = 'uhd';
     syncQualityUi();
