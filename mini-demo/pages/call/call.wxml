@@ -1,0 +1,93 @@
+<navigation-bar title="1 对 1 通话" back="{{true}}" color="#0f2243" background="transparent"></navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+  <view class="page">
+    <view class="panel">
+      <view class="panel-head">
+        <view class="panel-kicker">1V1 CALL</view>
+        <text class="panel-title">进入通话</text>
+        <text class="panel-desc">填写房间信息，或粘贴邀请链接直接进入</text>
+      </view>
+
+      <view class="section">
+        <text class="section-title">身份信息</text>
+        <view class="field">
+          <text class="field-label">用户 ID</text>
+          <view class="input-shell">
+            <input
+              class="field-input"
+              value="{{form.userId}}"
+              placeholder="本端用户 ID，双方不可相同"
+              placeholder-class="ph"
+              maxlength="32"
+              bindinput="onFieldInput"
+              data-key="userId"
+            />
+          </view>
+        </view>
+        <view class="field">
+          <text class="field-label">显示名称</text>
+          <view class="input-shell">
+            <input
+              class="field-input"
+              value="{{form.displayName}}"
+              placeholder="通话界面展示名，可选"
+              placeholder-class="ph"
+              maxlength="16"
+              bindinput="onFieldInput"
+              data-key="displayName"
+            />
+          </view>
+        </view>
+      </view>
+
+      <view class="section">
+        <text class="section-title">房间信息</text>
+        <view class="field">
+          <text class="field-label">房间 ID</text>
+          <view class="input-shell">
+            <input
+              class="field-input mono"
+              type="number"
+              value="{{form.roomId}}"
+              placeholder="数字房间号，例如 8888"
+              placeholder-class="ph"
+              bindinput="onFieldInput"
+              data-key="roomId"
+            />
+          </view>
+        </view>
+      </view>
+
+      <view class="section link-section {{hasLink ? 'is-active' : ''}}">
+        <view class="section-head">
+          <text class="section-title">邀请链接</text>
+          <text wx:if="{{hasLink}}" class="link-badge">优先使用链接</text>
+        </view>
+        <view class="input-shell link-shell">
+          <textarea
+            class="field-textarea"
+            value="{{form.inviteUrl}}"
+            placeholder="粘贴 meeting/index.html?room=...&invite=... 邀请链接"
+            placeholder-class="ph"
+            maxlength="-1"
+            auto-height
+            bindinput="onFieldInput"
+            data-key="inviteUrl"
+          />
+        </view>
+        <view class="link-tools">
+          <view class="chip" bindtap="onPasteLink" hover-class="chip-hover">粘贴链接</view>
+          <view class="chip chip-muted" bindtap="onClearLink" hover-class="chip-hover">清空</view>
+        </view>
+        <text class="field-hint">有链接时优先按链接进房，并合并本页填写的用户 ID / 显示名称。</text>
+      </view>
+
+      <button class="btn-primary" hover-class="btn-primary-hover" bindtap="onEnterCall">
+        进入通话
+      </button>
+    </view>
+
+    <text class="footnote">进入后将在小程序 WebView 中加载 1 对 1 通话 H5</text>
+  </view>
+</scroll-view>

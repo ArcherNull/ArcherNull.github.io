@@ -5,11 +5,23 @@ Page({
 
   onLoad(query) {
     let src = ''
+    let title = '会议中'
+    if (query.title) {
+      try {
+        title = decodeURIComponent(query.title)
+      } catch (e) {
+        title = query.title
+      }
+    }
     if (query.url) {
       try {
         src = decodeURIComponent(query.url)
       } catch (e) {
         src = query.url
+      }
+      // 1 对 1 通话页用 meeting/index.html
+      if (/\/meeting\/index\.html/i.test(src) && !query.title) {
+        title = '通话中'
       }
     } else if (query.roomId) {
       const roomId = decodeURIComponent(query.roomId)
@@ -20,7 +32,7 @@ Page({
     this.setData({ src })
 
     if (src) {
-      wx.setNavigationBarTitle({ title: '会议中' })
+      wx.setNavigationBarTitle({ title })
     }
   },
 

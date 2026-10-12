@@ -1132,29 +1132,57 @@
       $('display-name').value = localStorage.getItem('call.displayName') || '';
     }
 
+    /**
+     * 从 URL 回填入会参数（邀请链接 / 小程序表单）。
+     * 支持：room|roomId、sdkAppId、userId、displayName|userName、from、invite、autostart
+     * @returns {{ applied: boolean, autostart: boolean }}
+     */
     function applyInviteFromUrl() {
       const params = new URLSearchParams(location.search);
       const room = params.get('room') || params.get('roomId') || '';
       const sdkAppId = params.get('sdkAppId') || params.get('sdk') || '';
       const from = params.get('from') || '';
       const invite = params.get('invite') || '';
-      if (!room && !invite) return false;
+      const userId = params.get('userId') || params.get('userid') || '';
+      const displayName =
+        params.get('displayName') || params.get('userName') || params.get('name') || '';
+      const autostart = ['1', 'true', 'yes'].includes(
+        String(params.get('autostart') || '').toLowerCase()
+      );
+
+      if (!room && !invite && !userId && !displayName && !autostart) {
+        return { applied: false, autostart: false };
+      }
 
       if (room) $('room-id').value = String(room).replace(/\D/g, '');
       if (sdkAppId) $('sdk-app-id').value = String(sdkAppId).replace(/\D/g, '');
-      // 被邀请方使用新的 UserId，避免与发起人冲突
-      $('user-id').value = randomUserId();
-      if (!String($('display-name').value || '').trim()) {
+
+      if (userId) {
+        $('user-id').value = String(userId).trim();
+      } else if (invite) {
+        // 纯邀请链接未指定本端 UserId 时，随机生成以免与发起人冲突
+        $('user-id').value = randomUserId();
+      }
+
+      if (displayName) {
+        $('display-name').value = String(displayName).trim().slice(0, 16);
+      } else if (invite && !String($('display-name').value || '').trim()) {
         $('display-name').value = '访客';
       }
-      setStatusText(
-        from
-          ? `${from} 邀请你加入房间 ${$('room-id').value}。确认名称后点击「进入房间」。`
-          : `已通过邀请链接填好房间 ${$('room-id').value}。确认名称后点击「进入房间」。`
-      );
-      toast(from ? `${from} 邀请你通话` : '已填入邀请房间号');
+
+      if (room || invite) {
+        setStatusText(
+          from
+            ? `${from} 邀请你加入房间 ${$('room-id').value}。确认名称后点击「进入房间」。`
+            : `已通过链接填好房间 ${$('room-id').value}。确认名称后点击「进入房间」。`
+        );
+        if (!autostart) {
+          toast(from ? `${from} 邀请你通话` : '已填入邀请房间号');
+        }
+      }
+
       history.replaceState({}, '', location.pathname);
-      return true;
+      return { applied: !!(room || invite || userId || displayName), autostart };
     }
 
     function saveForm() {
@@ -1868,7 +1896,7 @@
       throw lastError || new Error('TRTC SDK 未加载');
     }
 
-    async function bootSdk() {
+    async function bootSdk(options = {}) {
       const sdkPill = $('sdk-pill');
       const enterBtn = $('btn-enter');
       enterBtn.disabled = true;
@@ -1880,6 +1908,10 @@
         setLobbyStatus('ready', '就绪');
         setStatusText('进房前请允许摄像头与麦克风权限。双方使用相同 SDKAppId 与 RoomId，UserId 不同。');
         enterBtn.disabled = false;
+        if (options.autostart) {
+          setStatusText('参数已就绪，正在自动进入房间…');
+          void enterRoom();
+        }
       } catch (e) {
         console.error(e);
         sdkPill.textContent = 'TRTC 加载失败';
@@ -2185,9 +2217,9 @@
     if (!QUALITY_PRESETS[state.quality]) state.quality = 'uhd';
     syncQualityUi();
     syncMoreMenuLabels();
-    applyInviteFromUrl();
+    const inviteResult = applyInviteFromUrl();
     bindEvents();
-    void bootSdk();
+    void bootSdk({ autostart: !!inviteResult.autostart });
     void probeDevices();
   })();
   </script>

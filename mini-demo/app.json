@@ -1,6 +1,8 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/call/call",
+    "pages/join/join",
     "pages/meeting/meeting",
     "pages/logs/logs"
   ],
