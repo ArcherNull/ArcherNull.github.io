@@ -328,86 +328,172 @@
     }
     .top-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
+    /* ===== 微信式通话画布：远端全屏 + 本地右上角小窗 ===== */
     .stage {
       position: relative;
       min-height: 0;
-      padding: 12px 16px 8px;
+      padding: 0;
       display: block;
       overflow: hidden;
+      background: #07070f;
+    }
+    .call-canvas {
+      position: absolute;
+      inset: 0;
+    }
+    .call-main {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(28, 28, 48, 0.9), transparent 52%),
+        #0a0a12;
+      overflow: hidden;
+    }
+    .call-idle {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background:
+        radial-gradient(circle at 50% 40%, rgba(0, 0, 135, 0.35), transparent 50%),
+        linear-gradient(180deg, #101018, #07070c);
+      transition: opacity .25s ease;
+    }
+    .stage.has-remote .call-idle { opacity: 0; pointer-events: none; }
+    .call-idle-text {
+      text-align: center;
+      font-size: .95rem;
+      line-height: 1.6;
+    }
+    .call-idle-text small {
+      display: block;
+      margin-top: 6px;
+      color: var(--faint);
+      font-size: .78rem;
     }
 
     .tile {
       position: relative;
-      border-radius: 12px;
       overflow: hidden;
       background: #0b0b1c;
-      border: 1px solid rgba(92, 92, 255, 0.18);
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     }
-    .tile-main {
-      width: 100%;
-      height: 100%;
-      min-height: min(64vh, 660px);
-      border-radius: 14px;
-    }
-    /* 参会者画中画：叠在主画面右上角 */
-    .pip-stack {
+    .tile-remote {
       position: absolute;
-      top: 20px;
-      right: 20px;
-      z-index: 6;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: flex-end;
-      max-height: calc(100% - 40px);
-      overflow: auto;
-      pointer-events: none;
+      inset: 0;
+      border: none;
+      border-radius: 0;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity .2s ease;
     }
-    .tile-pip {
-      width: min(30vw, 260px);
-      aspect-ratio: 16 / 10;
-      min-height: 0;
+    .tile-remote.is-active {
+      opacity: 1;
+      z-index: 3;
+    }
+    .tile-remote.is-secondary {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      inset: auto;
+      width: min(28vw, 120px);
+      aspect-ratio: 3 / 4;
       border-radius: 10px;
-      border: 2px solid rgba(160, 160, 255, 0.45);
-      box-shadow:
-        0 10px 28px rgba(0, 0, 0, 0.55),
-        0 0 0 1px rgba(0, 0, 135, 0.35),
-        0 0 24px rgba(0, 0, 135, 0.25);
-      pointer-events: auto;
-      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      z-index: 5;
+      opacity: 1;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    /* 本地：默认画中画；无人时铺满 */
+    .call-pip {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      border: none;
+      border-radius: 0;
+      transition: top .25s ease, right .25s ease, width .25s ease, height .25s ease, border-radius .25s ease;
+    }
+    .stage.has-remote .call-pip {
+      inset: auto;
+      top: max(14px, env(safe-area-inset-top));
+      right: 14px;
+      width: min(32vw, 132px);
+      aspect-ratio: 3 / 4;
+      height: auto;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      z-index: 8;
       animation: pipIn .28s ease-out;
+    }
+    /* 点击小窗切换主画面 */
+    .stage.swapped.has-remote .call-main {
+      inset: auto;
+      top: max(14px, env(safe-area-inset-top));
+      right: 14px;
+      width: min(32vw, 132px);
+      aspect-ratio: 3 / 4;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      z-index: 8;
+    }
+    .stage.swapped.has-remote .call-pip {
+      inset: 0;
+      width: auto;
+      height: auto;
+      aspect-ratio: auto;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      z-index: 4;
+      animation: none;
     }
     @keyframes pipIn {
       from { opacity: 0; transform: translateY(-8px) scale(0.96); }
       to { opacity: 1; transform: none; }
     }
-    .tile video, .tile .video-host {
+    .tile video, .tile .video-host, .call-main .video-host {
       width: 100%; height: 100%; object-fit: cover; background: #000;
       display: block;
     }
-    .tile .video-host { position: absolute; inset: 0; }
-    .tile .video-host > div, .tile .video-host video {
-      width: 100% !important; height: 100% !important; object-fit: cover;
+    .tile .video-host {
+      position: absolute; inset: 0;
+      min-width: 2px; min-height: 2px;
     }
-    .tile-pip .tile-badge {
+    .tile .video-host > div,
+    .tile .video-host video,
+    .tile .video-host canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      background: #000;
+    }
+    .call-pip .tile-badge {
       left: 8px; bottom: 8px;
       padding: 4px 8px;
       font-size: .7rem;
     }
-    .tile-pip .avatar {
+    .call-pip .avatar {
       width: 48px; height: 48px; font-size: 1.1rem; margin-bottom: 6px;
     }
-    .tile-pip .tile-empty { font-size: .72rem; }
+    .call-pip .tile-empty { font-size: .72rem; }
+    .tile-remote .avatar {
+      width: 88px; height: 88px; font-size: 2rem;
+    }
     .tile-badge {
       position: absolute; left: 10px; bottom: 10px;
       display: flex; align-items: center; gap: 8px;
       padding: 6px 12px; border-radius: 6px;
-      background: rgba(0, 0, 30, 0.72);
-      border: 1px solid rgba(92, 92, 255, 0.2);
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       backdrop-filter: blur(10px);
       font-size: .78rem; font-weight: 600;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      z-index: 4;
+      pointer-events: none;
     }
     .dot {
       width: 7px; height: 7px; border-radius: 50%; background: var(--success);
@@ -420,6 +506,7 @@
     .tile-empty {
       position: absolute; inset: 0; display: grid; place-items: center;
       color: var(--muted);
+      z-index: 2;
       background:
         radial-gradient(circle at 50% 42%, rgba(0, 0, 135, 0.45), transparent 48%),
         linear-gradient(180deg, #0a0a24, #050512);
@@ -434,14 +521,32 @@
       box-shadow: 0 0 36px rgba(0, 0, 135, 0.55);
       margin: 0 auto 14px;
     }
+    .call-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 6;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.45);
+      color: rgba(255, 255, 255, 0.78);
+      font-size: .72rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .stage.has-remote .call-hint { opacity: 1; }
 
     .toolbar {
-      display: flex; align-items: center; justify-content: center; gap: 14px;
-      padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+      display: flex; align-items: center; justify-content: center; gap: 18px;
+      padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
       background:
-        linear-gradient(0deg, rgba(0, 0, 20, 0.94) 0%, rgba(0, 0, 30, 0.72) 55%, transparent 100%);
-      border-top: 1px solid rgba(92, 92, 255, 0.1);
+        linear-gradient(0deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 70%, transparent 100%);
+      border-top: none;
       flex-wrap: wrap;
+      position: relative;
+      z-index: 10;
     }
     .tool {
       width: 52px; height: 52px; border-radius: 50%;
@@ -464,14 +569,16 @@
     .tool.leave {
       background: linear-gradient(135deg, #ff5a5f, var(--danger-deep));
       border-color: transparent;
-      width: auto; min-width: 108px;
-      padding: 0 20px;
-      border-radius: 26px;
-      gap: 8px;
-      display: inline-flex;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      gap: 0;
+      display: grid;
+      place-items: center;
       box-shadow: 0 8px 22px rgba(198, 40, 40, 0.45);
     }
-    .tool.leave:hover { filter: brightness(1.08); }
+    .tool.leave .tool-label { display: none; }
+    .tool.leave:hover { filter: brightness(1.08); transform: scale(1.04); }
     .tool.invite {
       background: linear-gradient(135deg, var(--brand-light), var(--brand));
       border-color: rgba(160, 160, 255, 0.35);
@@ -624,11 +731,15 @@
     @media (max-width: 720px) {
       .card { padding: 26px 20px; border-radius: 16px; }
       .row-2 { grid-template-columns: 1fr; }
-      .tile-main { min-height: 48vh; border-radius: 10px; }
-      .pip-stack { top: 12px; right: 12px; gap: 8px; }
-      .tile-pip { width: min(42vw, 160px); border-radius: 8px; }
+      .stage.has-remote .call-pip,
+      .stage.swapped.has-remote .call-main {
+        top: max(10px, env(safe-area-inset-top));
+        right: 10px;
+        width: min(34vw, 118px);
+        border-radius: 10px;
+      }
       .tool { width: 48px; height: 48px; }
-      .toolbar { gap: 10px; }
+      .toolbar { gap: 12px; }
       body::after { opacity: 0.28; }
     }
   </style>
@@ -720,20 +831,33 @@
 
       <main class="stage" id="stage">
         <div class="rec-banner hidden" id="rec-banner"><span class="rec-dot"></span><span id="rec-banner-text">云端录制中 00:00</span></div>
-        <div class="tile tile-main" id="local-tile">
-          <div class="video-host" id="local-video"></div>
-          <div class="tile-empty hidden" id="local-empty">
-            <div>
-              <div class="avatar" id="local-avatar">我</div>
-              <div style="text-align:center">摄像头已关闭</div>
+        <div class="call-canvas" id="call-canvas">
+          <div class="call-main" id="remote-stage" aria-live="polite">
+            <div class="call-idle" id="call-idle">
+              <div>
+                <div class="avatar" id="call-idle-avatar">?</div>
+                <div class="call-idle-text">
+                  等待对方加入
+                  <small>对方接通后画面将显示在这里</small>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="tile-badge">
-            <span class="dot" id="local-mic-dot"></span>
-            <span id="local-name-badge">我</span>
+          <div class="tile call-pip" id="local-tile" title="点击切换主画面">
+            <div class="video-host" id="local-video"></div>
+            <div class="tile-empty hidden" id="local-empty">
+              <div>
+                <div class="avatar" id="local-avatar">我</div>
+                <div style="text-align:center">摄像头已关闭</div>
+              </div>
+            </div>
+            <div class="tile-badge">
+              <span class="dot" id="local-mic-dot"></span>
+              <span id="local-name-badge">我</span>
+            </div>
           </div>
+          <div class="call-hint" id="call-hint">点击小窗可切换画面</div>
         </div>
-        <div class="pip-stack" id="pip-stack" aria-live="polite"></div>
       </main>
 
       <footer class="toolbar">
@@ -757,9 +881,9 @@
           <span class="rec-dot" aria-hidden="true"></span>
           <span class="tool-label" id="btn-record-label">云端录制</span>
         </button>
-        <button class="tool leave" id="btn-leave" title="离开会议">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v4M10 14 21 3M9 21H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <span class="tool-label">离开</span>
+        <button class="tool leave" id="btn-leave" title="挂断" aria-label="挂断">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7.2 15.6c1.7 1.8 3.9 3 6.3 3.5l1.7-1.7c.3-.3.7-.4 1.1-.3 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1V21c0 .6-.4 1-1 1C11.5 22 3 13.5 3 3c0-.6.4-1 1-1h2.3c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.3 1.1L6.9 9.6c.5 2.4 1.7 4.5 3.5 6.2Z" transform="rotate(135 12 12)" fill="currentColor"/></svg>
+          <span class="tool-label">挂断</span>
         </button>
       </footer>
     </section>
@@ -872,6 +996,9 @@
       trtc: null,
       localStream: null,
       remoteUsers: new Map(),
+      remoteNames: new Map(),
+      startedRemoteKeys: new Set(),
+      primaryRemoteId: '',
       waitTimer: null,
       channel: null,
       recording: false,
@@ -929,8 +1056,31 @@
       return s;
     }
 
-    function createUserId(prefix) {
-      return `${prefix}_${Math.floor(Math.random() * 100000)}`;
+    function encodeNameTag(name) {
+      const bytes = new TextEncoder().encode(String(name || 'user').slice(0, 10));
+      let hex = '';
+      for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
+      if (hex.length % 2) hex = hex.slice(0, -1);
+      return hex.slice(0, 16) || '75736572';
+    }
+
+    function decodeNameTag(hex) {
+      try {
+        const clean = String(hex || '').replace(/[^0-9a-f]/gi, '');
+        if (!clean || clean.length % 2) return '';
+        const pairs = clean.match(/.{2}/g) || [];
+        const bytes = new Uint8Array(pairs.map((h) => parseInt(h, 16)));
+        return new TextDecoder().decode(bytes).replace(/\u0000/g, '').trim();
+      } catch {
+        return '';
+      }
+    }
+
+    function createUserId(prefix, displayName) {
+      const role = prefix === 'host' ? 'h' : 'g';
+      const tag = encodeNameTag(displayName || (prefix === 'host' ? 'host' : 'guest'));
+      const rand = Math.floor(Math.random() * 46655).toString(36);
+      return `${role}_${tag}_${rand}`.slice(0, 32);
     }
 
     function meetingStorageKey(roomId) {
@@ -1058,61 +1208,210 @@
 
     function updateMeetingHeader() {
       const roleLabel = state.role === 'host' ? '房主' : '参会者';
-      $('meeting-title').textContent = `${state.displayName || '会议'} · ${roleLabel}`;
-      $('meeting-sub').textContent = `会议号 ${formatMeetingId(state.roomId)} · 用户 ${state.userId}`;
+      const remoteIds = [...state.remoteUsers.keys()];
+      if (remoteIds.length === 1) {
+        const peer = remoteDisplayName(remoteIds[0]);
+        $('meeting-title').textContent = peer;
+        $('meeting-sub').textContent = `通话中 · 会议号 ${formatMeetingId(state.roomId)}`;
+      } else if (remoteIds.length > 1) {
+        $('meeting-title').textContent = `多人通话（${remoteIds.length + 1}人）`;
+        $('meeting-sub').textContent = `会议号 ${formatMeetingId(state.roomId)} · ${roleLabel}`;
+      } else {
+        $('meeting-title').textContent = '等待对方接听…';
+        $('meeting-sub').textContent = `会议号 ${formatMeetingId(state.roomId)} · ${state.displayName || roleLabel}`;
+      }
       $('local-name-badge').textContent = `${state.displayName || '我'}${state.role === 'host' ? '（房主）' : ''}`;
       $('local-avatar').textContent = (state.displayName || '我').slice(0, 1).toUpperCase();
     }
 
+    function safeDomId(userId) {
+      return String(userId || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    function remoteViewId(userId) {
+      return `remote-video-${safeDomId(userId)}`;
+    }
+
+    function remoteTileId(userId) {
+      return `remote-tile-${safeDomId(userId)}`;
+    }
+
+    function remoteEmptyId(userId) {
+      return `remote-empty-${safeDomId(userId)}`;
+    }
+
+    function nextFrame() {
+      return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+
+    function fitVideoHost(host) {
+      if (!host) return;
+      host.querySelectorAll('video, canvas, div').forEach((el) => {
+        el.style.width = '100%';
+        el.style.height = '100%';
+        if (el.tagName === 'VIDEO' || el.tagName === 'CANVAS') {
+          el.style.objectFit = 'cover';
+        }
+      });
+    }
+
+    function refreshRemoteTileRoles() {
+      const ids = [...state.remoteUsers.keys()];
+      if (!ids.length) {
+        state.primaryRemoteId = '';
+        return;
+      }
+      if (!state.primaryRemoteId || !state.remoteUsers.has(state.primaryRemoteId)) {
+        state.primaryRemoteId = ids[0];
+      }
+      ids.forEach((uid) => {
+        const tile = document.getElementById(remoteTileId(uid));
+        if (!tile) return;
+        const isPrimary = uid === state.primaryRemoteId;
+        tile.classList.toggle('is-active', isPrimary);
+        tile.classList.toggle('is-secondary', !isPrimary);
+      });
+      const primaryName = remoteDisplayName(state.primaryRemoteId);
+      const idleAvatar = $('call-idle-avatar');
+      if (idleAvatar) idleAvatar.textContent = String(primaryName).slice(0, 1).toUpperCase() || '?';
+    }
+
     function syncStageLayout() {
-      $('stage').classList.toggle('has-remote', state.remoteUsers.size > 0);
+      const has = state.remoteUsers.size > 0;
+      const stage = $('stage');
+      stage.classList.toggle('has-remote', has);
+      if (!has) stage.classList.remove('swapped');
+      $('call-idle')?.classList.toggle('hidden', has);
+      refreshRemoteTileRoles();
+      updateMeetingHeader();
     }
 
     function remoteDisplayName(userId) {
       const raw = String(userId || '');
-      if (raw.startsWith('host_')) return '房主';
-      if (raw.startsWith('guest_')) return `参会者 ${raw.slice(6)}`;
+      if (state.remoteNames.has(raw)) return state.remoteNames.get(raw);
+      const tagged = raw.match(/^[hg]_([0-9a-f]+)_/i);
+      if (tagged) {
+        const decoded = decodeNameTag(tagged[1]);
+        if (decoded) return decoded;
+      }
+      if (raw.startsWith('host_') || raw.startsWith('h_')) return '房主';
+      if (raw.startsWith('guest_') || raw.startsWith('g_')) return '参会者';
       return raw || '参会者';
     }
 
+    function rememberRemoteName(userId, name) {
+      const label = String(name || '').trim();
+      if (!userId || !label) return remoteDisplayName(userId);
+      state.remoteNames.set(userId, label);
+      ensureRemoteTile(userId, label);
+      return label;
+    }
+
+    async function publishDisplayName(trtc) {
+      if (!trtc || !state.displayName) return;
+      try {
+        const data = new TextEncoder().encode(JSON.stringify({
+          t: 'name',
+          n: state.displayName,
+          r: state.role || 'guest'
+        }));
+        await trtc.sendCustomMessage({ cmdId: 1, data });
+      } catch (e) {
+        console.warn('publishDisplayName failed', e);
+      }
+    }
+
     function ensureRemoteTile(userId, label) {
-      const id = `remote-tile-${userId}`;
+      const id = remoteTileId(userId);
       let tile = document.getElementById(id);
       if (tile) {
         const nameEl = tile.querySelector('[data-remote-name]');
         if (nameEl && label) nameEl.textContent = label;
+        const avatar = tile.querySelector('.avatar');
+        if (avatar && label) avatar.textContent = String(label).slice(0, 1).toUpperCase();
         return tile;
       }
       const name = label || remoteDisplayName(userId);
       const initial = String(name).slice(0, 1).toUpperCase() || 'P';
+      const viewId = remoteViewId(userId);
+      const emptyId = remoteEmptyId(userId);
       tile = document.createElement('div');
-      tile.className = 'tile tile-pip';
+      tile.className = 'tile tile-remote';
       tile.id = id;
+      tile.dataset.userId = userId;
       tile.innerHTML = `
-        <div class="video-host" id="remote-video-${userId}"></div>
-        <div class="tile-empty" id="remote-empty-${userId}">
+        <div class="video-host" id="${viewId}"></div>
+        <div class="tile-empty" id="${emptyId}">
           <div>
             <div class="avatar">${initial}</div>
-            <div style="text-align:center">等待视频</div>
+            <div style="text-align:center">连接中…</div>
           </div>
         </div>
         <div class="tile-badge"><span class="dot"></span><span data-remote-name>${name}</span></div>
       `;
-      $('pip-stack').appendChild(tile);
-      state.remoteUsers.set(userId, state.remoteUsers.get(userId) || null);
+      $('remote-stage').appendChild(tile);
+      if (!state.remoteUsers.has(userId)) state.remoteUsers.set(userId, null);
+      if (!state.primaryRemoteId) state.primaryRemoteId = userId;
       syncStageLayout();
       return tile;
     }
 
     function setRemoteVideoVisible(userId, visible) {
-      const empty = document.getElementById(`remote-empty-${userId}`);
+      const empty = document.getElementById(remoteEmptyId(userId));
       if (empty) empty.classList.toggle('hidden', visible);
     }
 
     function removeRemoteTile(userId) {
-      document.getElementById(`remote-tile-${userId}`)?.remove();
+      document.getElementById(remoteTileId(userId))?.remove();
       state.remoteUsers.delete(userId);
+      for (const key of [...state.startedRemoteKeys]) {
+        if (key.startsWith(`${userId}:`)) state.startedRemoteKeys.delete(key);
+      }
+      if (state.primaryRemoteId === userId) {
+        state.primaryRemoteId = [...state.remoteUsers.keys()][0] || '';
+      }
       syncStageLayout();
+    }
+
+    async function playRemoteVideo(userId, streamType) {
+      const trtc = state.trtc;
+      if (!trtc || !userId) return;
+      const type = streamType ?? window.TRTC?.TYPE?.STREAM_TYPE_MAIN;
+      const key = `${userId}:${String(type)}`;
+      if (state.startedRemoteKeys.has(key)) return;
+
+      ensureRemoteTile(userId, remoteDisplayName(userId));
+      state.remoteUsers.set(userId, type);
+      syncStageLayout();
+
+      try {
+        const view = await waitForElement(remoteViewId(userId), 4000);
+        await nextFrame();
+        // 确保容器有可测量尺寸，避免 SDK 按 0x0 初始化导致黑屏
+        if (view.clientWidth < 2 || view.clientHeight < 2) {
+          view.style.width = '100%';
+          view.style.height = '100%';
+          view.style.minWidth = '160px';
+          view.style.minHeight = '160px';
+          await nextFrame();
+        }
+        if (!state.trtc) return;
+        await state.trtc.startRemoteVideo({
+          userId,
+          streamType: type,
+          view,
+          option: { fillMode: 'cover', mirror: false }
+        });
+        state.startedRemoteKeys.add(key);
+        fitVideoHost(view);
+        setRemoteVideoVisible(userId, true);
+        refreshRemoteTileRoles();
+      } catch (e) {
+        console.error('playRemoteVideo failed', e);
+        state.startedRemoteKeys.delete(key);
+        setRemoteVideoVisible(userId, false);
+        toast(`拉取远端视频失败：${e?.message || e}`);
+      }
     }
 
     async function enumerateCameras() {
@@ -1336,7 +1635,8 @@
       const response = await callTrtcCloudApi('CreateCloudRecording', {
         SdkAppId: Number(TRTC_CONFIG.sdkAppId),
         RoomId: roomId,
-        RoomIdType: 0,
+        // 与进房一致：使用字符串房间号（15 位会议号）
+        RoomIdType: 1,
         UserId: recorderId,
         UserSig: userSig,
         RecordParams: {
@@ -1373,7 +1673,7 @@
 
     function findStageVideos() {
       const local = $('local-video')?.querySelector('video');
-      const remotes = [...document.querySelectorAll('#pip-stack video')];
+      const remotes = [...document.querySelectorAll('#remote-stage .tile-remote video')];
       return { local, remotes };
     }
 
@@ -1386,18 +1686,24 @@
         ctx.fillStyle = '#050512';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const { local, remotes } = findStageVideos();
-        if (local && local.readyState >= 2) {
-          ctx.drawImage(local, 0, 0, canvas.width, canvas.height);
+        const main = remotes[0] && remotes[0].readyState >= 2 ? remotes[0] : local;
+        if (main && main.readyState >= 2) {
+          ctx.drawImage(main, 0, 0, canvas.width, canvas.height);
         } else {
           ctx.fillStyle = '#8b8bb8';
           ctx.font = '600 28px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(state.displayName || '会议录制', canvas.width / 2, canvas.height / 2);
         }
-        remotes.slice(0, 3).forEach((video, i) => {
-          if (video.readyState < 2) return;
-          const w = 280;
-          const h = 158;
+        // 小窗：本地（若主画面是远端）或其余远端
+        const pipList = [];
+        if (main === remotes[0] && local && local.readyState >= 2) pipList.push(local);
+        remotes.slice(main === remotes[0] ? 1 : 0, 3).forEach((v) => {
+          if (v !== main && v.readyState >= 2) pipList.push(v);
+        });
+        pipList.slice(0, 3).forEach((video, i) => {
+          const w = 220;
+          const h = 294;
           const x = canvas.width - w - 24;
           const y = 24 + i * (h + 12);
           ctx.save();
@@ -1583,68 +1889,94 @@
       stopLocalStream();
 
       const TRTC = window.TRTC;
-      const roomIdNum = Number(digitsOnly(state.roomId));
+      // 会议号为 15 位，超过数字 roomId 上限(4294967294)，必须用字符串房间号互通
+      const strRoomId = digitsOnly(state.roomId);
       const userSig = genTestUserSig(state.userId);
       const trtc = TRTC.create();
       state.trtc = trtc;
 
+      state.startedRemoteKeys.clear();
+      state.primaryRemoteId = '';
+
       trtc.on(TRTC.EVENT.REMOTE_USER_ENTER, (event) => {
-        ensureRemoteTile(event.userId, remoteDisplayName(event.userId));
+        const name = remoteDisplayName(event.userId);
+        ensureRemoteTile(event.userId, name);
         setRemoteVideoVisible(event.userId, false);
-        toast(`${remoteDisplayName(event.userId)} 已加入`);
+        toast(`${name} 已加入`);
+        void publishDisplayName(trtc);
       });
       trtc.on(TRTC.EVENT.REMOTE_USER_EXIT, (event) => {
+        const name = remoteDisplayName(event.userId);
+        try { trtc.stopRemoteVideo?.({ userId: event.userId, streamType: TRTC.TYPE.STREAM_TYPE_MAIN }); } catch {}
         removeRemoteTile(event.userId);
-        toast(`${remoteDisplayName(event.userId)} 已离开`);
+        state.remoteNames.delete(event.userId);
+        toast(`${name} 已离开`);
       });
-      trtc.on(TRTC.EVENT.REMOTE_VIDEO_AVAILABLE, async (event) => {
-        state.remoteUsers.set(event.userId, event.streamType);
-        ensureRemoteTile(event.userId, remoteDisplayName(event.userId));
-        try {
-          const view = await waitForElement(`remote-video-${event.userId}`);
-          view.innerHTML = '';
-          await trtc.startRemoteVideo({
-            userId: event.userId,
-            streamType: event.streamType,
-            view
-          });
-          setRemoteVideoVisible(event.userId, true);
-        } catch (e) {
-          console.error(e);
-          toast('拉取远端视频失败，请确认双方 TRTC 配置一致');
-          setRemoteVideoVisible(event.userId, false);
-        }
+      // 与参考项目一致：先落 DOM，再传 HTMLElement 给 startRemoteVideo
+      trtc.on(TRTC.EVENT.REMOTE_VIDEO_AVAILABLE, (event) => {
+        void playRemoteVideo(event.userId, event.streamType);
       });
       trtc.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (event) => {
-        const host = document.getElementById(`remote-video-${event.userId}`);
-        if (host) host.innerHTML = '';
+        const key = `${event.userId}:${String(event.streamType)}`;
+        state.startedRemoteKeys.delete(key);
+        try {
+          trtc.stopRemoteVideo?.({ userId: event.userId, streamType: event.streamType });
+        } catch {}
         setRemoteVideoVisible(event.userId, false);
       });
       trtc.on(TRTC.EVENT.REMOTE_AUDIO_AVAILABLE, (event) => {
-        if (!state.speakerOn) {
-          void trtc.muteRemoteAudio(event.userId, true);
+        void trtc.muteRemoteAudio(event.userId, !state.speakerOn);
+      });
+      trtc.on(TRTC.EVENT.CUSTOM_MESSAGE, (event) => {
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(event.data));
+          if (msg?.t === 'name' && msg.n) {
+            const prev = state.remoteNames.get(event.userId);
+            rememberRemoteName(event.userId, msg.n);
+            if (prev && prev !== msg.n) toast(`对方显示为：${msg.n}`);
+          }
+        } catch (e) {
+          console.warn('CUSTOM_MESSAGE parse failed', e);
         }
       });
+      if (TRTC.EVENT.AUTOPLAY_FAILED) {
+        trtc.on(TRTC.EVENT.AUTOPLAY_FAILED, (event) => {
+          toast('浏览器限制了自动播放，请点击页面或扬声器按钮开启声音');
+          setSpeakerUi(false);
+          // 保留 resume，供用户点击后恢复
+          if (typeof event?.resume === 'function') {
+            const once = () => {
+              try { event.resume(); } catch {}
+              document.removeEventListener('click', once, true);
+            };
+            document.addEventListener('click', once, true);
+          }
+        });
+      }
 
       await trtc.enterRoom({
-        roomId: roomIdNum,
-        sdkAppId: TRTC_CONFIG.sdkAppId,
+        strRoomId,
+        sdkAppId: Number(TRTC_CONFIG.sdkAppId),
         userId: state.userId,
         userSig,
         scene: TRTC.TYPE.SCENE_RTC
       });
 
-      // 进房后补拉已在房间内的远端用户（避免错过进房前事件）
+      // 进房后补建已在房间内的远端占位；真正拉流交给 REMOTE_VIDEO_AVAILABLE
       try {
-        const remoteList = trtc.getRemoteUsers?.() || [];
-        remoteList.forEach((u) => {
-          const uid = u.userId || u;
-          ensureRemoteTile(uid, remoteDisplayName(uid));
+        const users = typeof trtc.getRemoteUsers === 'function' ? (trtc.getRemoteUsers() || []) : [];
+        users.forEach((u) => {
+          const uid = u?.userId || u;
+          if (uid) ensureRemoteTile(uid, remoteDisplayName(uid));
         });
-      } catch {}
+      } catch (e) {
+        console.warn('sync existing remotes failed', e);
+      }
+
+      await publishDisplayName(trtc);
 
       const localView = await waitForElement('local-video');
-      localView.innerHTML = '';
+      await nextFrame();
       const res = RESOLUTIONS[state.resolution] || RESOLUTIONS['1280x720'];
 
       if (state.videoOn) {
@@ -1652,9 +1984,12 @@
           view: localView,
           option: {
             cameraId: state.cameraId || undefined,
-            profile: res.profile
+            profile: res.profile,
+            fillMode: 'cover',
+            mirror: true
           }
         });
+        fitVideoHost(localView);
       }
       await trtc.startLocalAudio({
         option: {
@@ -1665,10 +2000,12 @@
       });
       if (!state.micOn) await trtc.updateLocalAudio({ mute: true });
       if (!state.speakerOn) await trtc.muteRemoteAudio('*', true);
+      else await trtc.muteRemoteAudio('*', false);
 
       setCamUi(state.videoOn);
       setMicUi(state.micOn);
       setSpeakerUi(state.speakerOn);
+      syncStageLayout();
     }
 
     async function enterMeetingRoom() {
@@ -1731,7 +2068,12 @@
       await destroyTrtc();
       stopLocalStream();
       state.remoteUsers.clear();
-      $('pip-stack').innerHTML = '';
+      state.remoteNames.clear();
+      state.startedRemoteKeys.clear();
+      state.primaryRemoteId = '';
+      $('remote-stage')?.querySelectorAll('.tile-remote').forEach((el) => el.remove());
+      $('stage')?.classList.remove('swapped', 'has-remote');
+      $('call-idle')?.classList.remove('hidden');
       syncStageLayout();
       state.status = 'idle';
       state.role = null;
@@ -1743,8 +2085,8 @@
       state.role = 'host';
       state.roomId = randomDigits(15);
       state.passcode = randomPasscode(8);
-      state.userId = createUserId('host');
       state.displayName = '房主';
+      state.userId = createUserId('host', state.displayName);
 
       writeMeetingMeta(state.roomId, {
         started: true,
@@ -1826,7 +2168,7 @@
       state.roomId = rid;
       state.passcode = pwd;
       state.displayName = displayName;
-      state.userId = createUserId('guest');
+      state.userId = createUserId('guest', displayName);
 
       // TRTC 已配置：凭会议号直接进房（可与房主互通）
       if (trtcEnabled()) {
@@ -1909,15 +2251,21 @@
         try {
           await state.trtc.muteRemoteAudio('*', !next);
           setSpeakerUi(next);
+          if (next) toast('已开启对方声音');
         } catch {
           toast('扬声器切换失败');
         }
         return;
       }
-      document.querySelectorAll('[id^="remote-video-"] video').forEach((v) => {
+      document.querySelectorAll('#remote-stage video').forEach((v) => {
         v.muted = !next;
       });
       setSpeakerUi(next);
+    }
+
+    function toggleCallSwap() {
+      if (state.remoteUsers.size === 0) return;
+      $('stage').classList.toggle('swapped');
     }
 
     async function applyDevices() {
@@ -2025,6 +2373,19 @@
       $('btn-cam').addEventListener('click', () => void toggleCam());
       $('btn-speaker').addEventListener('click', () => void toggleSpeaker());
       $('btn-leave').addEventListener('click', () => void leaveMeeting());
+      $('local-tile')?.addEventListener('click', toggleCallSwap);
+      $('remote-stage')?.addEventListener('click', (e) => {
+        if (e.target.closest('.tile-remote.is-secondary')) {
+          const tile = e.target.closest('.tile-remote');
+          const uid = tile?.dataset?.userId;
+          if (uid && state.remoteUsers.has(uid)) {
+            state.primaryRemoteId = uid;
+            refreshRemoteTileRoles();
+          }
+          return;
+        }
+        if ($('stage').classList.contains('swapped')) toggleCallSwap();
+      });
 
       try {
         state.channel = new BroadcastChannel('cloud-meet');
