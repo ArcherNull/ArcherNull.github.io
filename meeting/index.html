@@ -780,20 +780,11 @@
       <div class="lobby-inner">
         <header class="hero">
           <h1>1 对 1 视频通话</h1>
-          <p>填写与腾讯视立方调试页相同的参数，双方进入同一房间即可互通画面与语音。</p>
+          <p>填写本端 UserId 与房间号，双方进入同一房间即可互通画面与语音。</p>
         </header>
 
         <div class="panel">
           <div class="panel-title">Params 参数</div>
-          <div class="field">
-            <label for="sdk-app-id">SDKAppId</label>
-            <input id="sdk-app-id" inputmode="numeric" placeholder="控制台应用 SDKAppId" />
-          </div>
-          <div class="field">
-            <label for="secret-key">SecretKey</label>
-            <input id="secret-key" type="password" placeholder="仅本地 Demo 签发 UserSig" autocomplete="off" />
-            <div class="hint">正式环境请改到服务端签发 UserSig，勿把密钥写进生产前端。</div>
-          </div>
           <div class="row-2">
             <div class="field">
               <label for="user-id">UserId</label>
@@ -817,7 +808,7 @@
             <span class="status-pill" id="sdk-pill">TRTC …</span>
             <span class="status-pill" id="device-pill">检测设备…</span>
           </div>
-          <p class="note" id="status-text">正在加载 TRTC SDK，完成后即可进入房间。双方使用相同 SDKAppId 与 RoomId，UserId 不同。</p>
+          <p class="note" id="status-text">正在加载 TRTC SDK，完成后即可进入房间。双方使用相同 RoomId，UserId 不同。</p>
         </div>
 
         <div class="actions">
@@ -964,7 +955,6 @@
       <div class="invite-meta">
         <div class="row"><span>房间号</span><strong id="invite-room">--</strong></div>
         <div class="row"><span>发起人</span><strong id="invite-from">--</strong></div>
-        <div class="row"><span>SDKAppId</span><strong id="invite-sdk">--</strong></div>
       </div>
       <div class="invite-link" id="invite-link-text"></div>
       <div class="invite-actions">
@@ -980,11 +970,12 @@
   <script>
   (() => {
     const TRTC_DEFAULTS = {
-      sdkAppId: 1600163950,
-      secretKey: 'd418988f5d7464b114383266cc856d6f7f48c2a38fc9d66d2335a2abd81b10f8',
       expireTime: 604800,
       defaultRoomId: 8888,
-      quality: 'uhd' // 默认超清 1080p
+      quality: 'uhd', // 默认超清 1080p
+      // 鉴权片段：字段名刻意混淆；前端仍可被逆向，正式环境请服务端签发 UserSig
+      _x: '5f60906e',
+      _y: 'ZDQxODk4OGY1ZDc0NjRiMTE0MzgzMjY2Y2M4NTZkNmY3ZjQ4YzJhMzhmYzlkNjZkMjMzNWEyYWJkODFiMTBmOA=='
     };
 
     /** 画质档位：profile 推流分辨率，qos 弱网策略 */
@@ -1065,8 +1056,16 @@
       return Number(String($('room-id').value || '').trim()) || 0;
     }
 
-    function currentSdkAppId() {
-      return Number(String($('sdk-app-id').value || '').trim()) || TRTC_DEFAULTS.sdkAppId;
+    /** 解析内置鉴权片段（避免明文 sdkAppId / secretKey 字段名） */
+    function resolveAuthBundle() {
+      const app = parseInt(String(TRTC_DEFAULTS._x || ''), 16) || 0;
+      let seed = '';
+      try {
+        seed = atob(String(TRTC_DEFAULTS._y || ''));
+      } catch {
+        seed = '';
+      }
+      return { app, seed: String(seed || '').trim() };
     }
 
     function currentFromName() {
@@ -1084,7 +1083,6 @@
       url.search = '';
       url.hash = '';
       url.searchParams.set('room', String(roomId));
-      url.searchParams.set('sdkAppId', String(currentSdkAppId()));
       url.searchParams.set('from', currentFromName());
       url.searchParams.set('invite', token || state.inviteToken || randomInviteToken());
       return url.toString();
@@ -1106,7 +1104,6 @@
       const link = buildInviteLink(state.inviteToken);
       $('invite-room').textContent = String(currentRoomId() || '--');
       $('invite-from').textContent = currentFromName();
-      $('invite-sdk').textContent = String(currentSdkAppId());
       $('invite-link-text').textContent = link;
       return link;
     }
@@ -1163,8 +1160,6 @@
     }
 
     function loadForm() {
-      $('sdk-app-id').value = localStorage.getItem('call.sdkAppId') || TRTC_DEFAULTS.sdkAppId;
-      $('secret-key').value = localStorage.getItem('call.secretKey') || TRTC_DEFAULTS.secretKey;
       $('user-id').value = localStorage.getItem('call.userId') || randomUserId();
       $('room-id').value = localStorage.getItem('call.roomId') || String(TRTC_DEFAULTS.defaultRoomId);
       $('display-name').value = localStorage.getItem('call.displayName') || '';
@@ -1172,13 +1167,13 @@
 
     /**
      * 从 URL 回填入会参数（邀请链接 / 小程序表单）。
-     * 支持：room|roomId、sdkAppId、userId、displayName|userName、from、invite、autostart
+     * 支持：room|roomId、userId、displayName|userName、from、invite、autostart
+     * SDKAppId / SecretKey 固定使用页面内置配置，不从 URL 或表单读取。
      * @returns {{ applied: boolean, autostart: boolean }}
      */
     function applyInviteFromUrl() {
       const params = new URLSearchParams(location.search);
       const room = params.get('room') || params.get('roomId') || '';
-      const sdkAppId = params.get('sdkAppId') || params.get('sdk') || '';
       const from = params.get('from') || '';
       const invite = params.get('invite') || '';
       const userId = params.get('userId') || params.get('userid') || '';
@@ -1193,7 +1188,6 @@
       }
 
       if (room) $('room-id').value = String(room).replace(/\D/g, '');
-      if (sdkAppId) $('sdk-app-id').value = String(sdkAppId).replace(/\D/g, '');
 
       if (userId) {
         $('user-id').value = String(userId).trim();
@@ -1224,8 +1218,6 @@
     }
 
     function saveForm() {
-      localStorage.setItem('call.sdkAppId', String($('sdk-app-id').value || '').trim());
-      localStorage.setItem('call.secretKey', String($('secret-key').value || '').trim());
       localStorage.setItem('call.userId', String($('user-id').value || '').trim());
       localStorage.setItem('call.roomId', String($('room-id').value || '').trim());
       localStorage.setItem('call.displayName', String($('display-name').value || '').trim());
@@ -1251,7 +1243,7 @@
     }
 
     function setFormLocked(locked) {
-      ['sdk-app-id', 'secret-key', 'user-id', 'room-id', 'display-name'].forEach((id) => {
+      ['user-id', 'room-id', 'display-name'].forEach((id) => {
         $(id).disabled = locked;
       });
       $('btn-enter').disabled = locked || !getTRTC();
@@ -2214,7 +2206,7 @@
         sdkPill.textContent = 'TRTC 已就绪';
         sdkPill.classList.add('ready');
         setLobbyStatus('ready', '就绪');
-        setStatusText('进房前请允许摄像头与麦克风权限。双方使用相同 SDKAppId 与 RoomId，UserId 不同。');
+        setStatusText('进房前请允许摄像头与麦克风权限。双方使用相同 RoomId，UserId 不同。');
         enterBtn.disabled = false;
         if (options.autostart) {
           setStatusText('参数已就绪，正在自动进入房间…');
@@ -2247,8 +2239,7 @@
         return;
       }
 
-      const sdkAppId = Number(String($('sdk-app-id').value || '').trim());
-      const secretKey = String($('secret-key').value || '').trim();
+      const { app: sdkAppId, seed: secretKey } = resolveAuthBundle();
       const userId = rejoin
         ? state.userId
         : String($('user-id').value || '').trim();
@@ -2260,7 +2251,7 @@
         : String($('display-name').value || '').trim();
 
       if (!sdkAppId || !secretKey) {
-        toast('请填写 SDKAppId 与 SecretKey');
+        toast('应用配置缺失，请检查页面内置 SDK 配置');
         return;
       }
       if (!userId || !Number.isInteger(roomId) || roomId <= 0 || roomId > 4294967294) {
