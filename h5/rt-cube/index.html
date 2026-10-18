@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/h5/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>my-awesome-app</title>
+    <script>
+      ;(function () {
+        var path = location.pathname
+        if (path.endsWith('/index.html')) {
+          history.replaceState(null, '', path.slice(0, -'index.html'.length) + location.search + location.hash)
+        }
+      })()
+    </script>
+    <script type="module" crossorigin src="/h5/assets/index-DzZG9mzQ.js"></script>
+    <link rel="stylesheet" crossorigin href="/h5/assets/index-CqJDnIDs.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
