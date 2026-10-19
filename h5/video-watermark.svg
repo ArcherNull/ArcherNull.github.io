@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="64" viewBox="0 0 240 64" fill="none">
+  <rect x="4" y="8" width="232" height="48" rx="10" fill="#0B1220" fill-opacity="0.45"/>
+  <circle cx="36" cy="32" r="14" fill="#3B82F6"/>
+  <path d="M30 32.5l4.2 4.2L44 26.5" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Sparrow (path text for canvas-safe compositing) -->
+  <path fill="#FFFFFF" d="M58 22h3.1l2.2 7.1 2.2-7.1h3.1l-3.7 10.6h-3.2L58 22zm16.2 0h8.6v2.5h-5.5v2.1h5v2.4h-5v2.2h5.7v2.5h-8.8V22zm11.4 0h3.1v8.1h5.3v2.5h-8.4V22zm11.8 0h3.1v10.6h-3.1V22zm6.6 0h3.4l2.4 6.4 2.4-6.4h3.4l-3.9 10.6h-3.1l2.1-5.9-2.3 5.9h-3.1L104 22zm15.8 0h8.4v2.5h-5.3v2h4.7v2.3h-4.7v3.8h-3.1V22z"/>
+  <path fill="#E2E8F0" d="M58 40h2.4l1.1 3.4 1.1-3.4h2.4l-2.2 5.8h-2.1L58 40zm9.4 0h2.3v5.8h-2.3V40zm4.2 0h5.6v1.5h-3.3v1.1h2.9v1.4h-2.9v1.8h-2.3V40zm8.6 0h2.3l1.6 3.5V40h2.2v5.8h-2.2l-1.7-3.6v3.6h-2.2V40zm8.8 0h5.5v1.5h-3.2v1.2h2.8v1.3h-2.8v1.8h-2.3V40z"/>
+</svg>
