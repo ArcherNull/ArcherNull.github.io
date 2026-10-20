@@ -1,0 +1,1 @@
+import{n as e}from"./index-Dn2IPIJf.js";import{t}from"./FileManagerPage-DRogm0VR.js";var n=e();function r(){return(0,n.jsx)(t,{provider:`trtc`,backTo:`/rt-cube`,titleKey:`fileMgt.rtCubeTitle`,subtitleKey:`fileMgt.rtCubeSubtitle`})}export{r as default};

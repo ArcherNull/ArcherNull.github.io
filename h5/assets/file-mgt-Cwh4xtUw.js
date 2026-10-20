@@ -1,0 +1,1 @@
+import{n as e}from"./index-Dn2IPIJf.js";import{t}from"./FileManagerPage-DRogm0VR.js";var n=e();function r(){return(0,n.jsx)(t,{provider:`agora`,backTo:`/agora`,titleKey:`fileMgt.agoraTitle`,subtitleKey:`fileMgt.agoraSubtitle`})}export{r as default};
